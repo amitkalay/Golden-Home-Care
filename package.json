@@ -1,16 +1,16 @@
 {
-  "name": "golden-nest",
+  "name": "golden-home-care",
   "private": true,
   "version": "0.1.0",
-  "description": "Golden Nest monorepo",
+  "description": "Golden Home Care monorepo",
   "workspaces": [
     "apps/*"
   ],
   "scripts": {
-    "dev": "npm --workspace @golden-nest/web run dev --",
-    "build": "npm --workspace @golden-nest/web run build",
-    "start": "npm --workspace @golden-nest/web run start",
-    "test": "npm --workspace @golden-nest/web run test"
+    "dev": "npm --workspace @golden-home-care/web run dev --",
+    "build": "npm --workspace @golden-home-care/web run build",
+    "start": "npm --workspace @golden-home-care/web run start",
+    "test": "npm --workspace @golden-home-care/web run test"
   },
   "engines": {
     "node": ">=20"

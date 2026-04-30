@@ -75,12 +75,12 @@ export default function HomePage() {
   return (
     <main className="site-shell">
       <header className="nav">
-        <a className="brand" href="#" aria-label="Golden Nest home">
+        <a className="brand" href="#" aria-label="Golden Home Care home">
           <span className="brand-mark">
             <Home size={34} strokeWidth={1.6} />
             <HandHeart size={28} strokeWidth={1.5} />
           </span>
-          <span>Golden Nest</span>
+          <span>Golden Home Care</span>
         </a>
         <nav className="nav-links" aria-label="Primary navigation">
           <a href="#how">How It Works</a>
@@ -99,7 +99,7 @@ export default function HomePage() {
         <div className="hero-copy">
           <h1>Trusted support for aging parents at home.</h1>
           <p>
-            Golden Nest helps families book trusted local companions for aging
+            Golden Home Care helps families book trusted local companions for aging
             parents who want to stay independent, with recurring visits,
             provider-set rates, and updates after every visit.
           </p>
@@ -111,7 +111,7 @@ export default function HomePage() {
               Become a provider
             </a>
           </div>
-          <div className="trust-row" aria-label="Golden Nest trust highlights">
+          <div className="trust-row" aria-label="Golden Home Care trust highlights">
             <span>
               <ShieldCheck size={25} /> Background-checked companions
             </span>
@@ -160,7 +160,7 @@ export default function HomePage() {
       <section className="start-section" id="start">
         <div className="section-title">
           <span />
-          <h2>Get started with Golden Nest</h2>
+          <h2>Get started with Golden Home Care</h2>
           <span />
         </div>
         <div className="forms-grid">
@@ -170,7 +170,7 @@ export default function HomePage() {
       </section>
 
       <section className="how-section" id="how">
-        <h2>How Golden Nest works</h2>
+        <h2>How Golden Home Care works</h2>
         <div className="steps">
           <StepCard
             number="1"
@@ -203,7 +203,7 @@ export default function HomePage() {
           ))}
         </div>
         <p className="support-note">
-          <Heart size={18} /> Golden Nest providers offer non-medical support
+          <Heart size={18} /> Golden Home Care providers offer non-medical support
           only.
         </p>
       </section>
@@ -228,12 +228,12 @@ export default function HomePage() {
 
       <footer className="footer">
         <div className="footer-brand">
-          <a className="brand" href="#" aria-label="Golden Nest home">
+          <a className="brand" href="#" aria-label="Golden Home Care home">
             <span className="brand-mark">
               <Home size={31} strokeWidth={1.6} />
               <HandHeart size={25} strokeWidth={1.5} />
             </span>
-            <span>Golden Nest</span>
+            <span>Golden Home Care</span>
           </a>
           <p>Non-medical support for older adults and their families.</p>
         </div>
@@ -256,7 +256,7 @@ export default function HomePage() {
           <span>f</span>
           <span>ig</span>
           <span>in</span>
-          <p>© 2025 Golden Nest, Inc. All rights reserved.</p>
+          <p>© 2025 Golden Home Care, Inc. All rights reserved.</p>
         </div>
       </footer>
     </main>
