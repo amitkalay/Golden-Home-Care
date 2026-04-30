@@ -9,7 +9,8 @@
   "scripts": {
     "dev": "npm --workspace @golden-nest/web run dev --",
     "build": "npm --workspace @golden-nest/web run build",
-    "start": "npm --workspace @golden-nest/web run start"
+    "start": "npm --workspace @golden-nest/web run start",
+    "test": "npm --workspace @golden-nest/web run test"
   },
   "engines": {
     "node": ">=20"
