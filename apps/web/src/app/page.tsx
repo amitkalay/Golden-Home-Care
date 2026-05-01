@@ -22,6 +22,13 @@ import {
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
+import { submitFamilyLead } from "./actions";
+import {
+  frequencyOptions,
+  helpNeededOptions,
+  neededTimelineOptions,
+  relationshipOptions,
+} from "./family-leads/validation.js";
 
 const services = [
   {
@@ -71,7 +78,16 @@ const trustItems = [
   },
 ];
 
-export default function HomePage() {
+type HomePageProps = {
+  searchParams?: Promise<{
+    lead?: string | string[];
+  }>;
+};
+
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const params = searchParams ? await searchParams : {};
+  const leadStatus = Array.isArray(params.lead) ? params.lead[0] : params.lead;
+
   return (
     <main className="site-shell">
       <header className="nav">
@@ -164,7 +180,7 @@ export default function HomePage() {
           <span />
         </div>
         <div className="forms-grid">
-          <CareForm />
+          <CareForm status={leadStatus} />
           <ProviderForm />
         </div>
       </section>
@@ -263,38 +279,128 @@ export default function HomePage() {
   );
 }
 
-function CareForm() {
+function CareForm({ status }: { status?: string }) {
   return (
-    <form className="form-card" aria-label="Find care near me">
+    <form className="form-card care-card" aria-label="Find care near me" action={submitFamilyLead}>
       <div className="form-heading">
         <span className="icon-bubble gold">
           <UsersRound size={34} />
         </span>
         <div>
           <h2>Find care near me</h2>
-          <p>For families looking for support for an aging loved one.</p>
+          <p>Share a few details so we can understand what kind of support would help.</p>
         </div>
       </div>
-      <label>
-        ZIP code
-        <input type="text" placeholder="Enter ZIP code" inputMode="numeric" />
+      <label className="honeypot" aria-hidden="true">
+        Company website
+        <input name="companyWebsite" type="text" tabIndex={-1} autoComplete="off" />
       </label>
-      <SelectLabel label="What help is needed?" placeholder="Select help needed" />
-      <SelectLabel label="How often?" placeholder="Select frequency" />
-      <SelectLabel label="Budget range" placeholder="Select budget range" />
       <label>
-        Your email
-        <input type="email" placeholder="you@example.com" />
+        Name
+        <input name="name" type="text" placeholder="Your name" autoComplete="name" required />
       </label>
-      <button className="button button-primary form-button" type="button">
-        See available companions
+      <label>
+        Email
+        <input name="email" type="email" placeholder="you@example.com" autoComplete="email" required />
+      </label>
+      <label>
+        Phone
+        <input name="phone" type="tel" placeholder="(555) 123-4567" autoComplete="tel" required />
+      </label>
+      <label>
+        ZIP code <span className="optional-text">Optional</span>
+        <input name="zipCode" type="text" placeholder="Enter ZIP code" inputMode="numeric" autoComplete="postal-code" />
+      </label>
+      <label>
+        Relationship to older adult
+        <select name="relationship" defaultValue="" required>
+          <option value="" disabled>
+            Select relationship
+          </option>
+          {relationshipOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <fieldset className="checkbox-group full">
+        <legend>Help needed</legend>
+        {helpNeededOptions.map((option) => (
+          <label key={option.value}>
+            <input name="helpNeeded" type="checkbox" value={option.value} />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </fieldset>
+      <label>
+        How often?
+        <select name="frequency" defaultValue="" required>
+          <option value="" disabled>
+            Select frequency
+          </option>
+          {frequencyOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        When do you need help?
+        <select name="neededTimeline" defaultValue="" required>
+          <option value="" disabled>
+            Select timeline
+          </option>
+          {neededTimelineOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label className="full">
+        Biggest concern / notes <span className="optional-text">Optional</span>
+        <textarea name="notes" placeholder="Share anything helpful for matching non-medical support." rows={4} />
+      </label>
+      <button className="button button-primary form-button full" type="submit">
+        Find care near me
       </button>
+      <LeadStatusMessage status={status} />
       <p className="form-note">
         <Heart size={18} /> Companionship, errands, walks, and medication
         reminders.
       </p>
     </form>
   );
+}
+
+function LeadStatusMessage({ status }: { status?: string }) {
+  if (status === "success") {
+    return (
+      <p className="form-alert success full" role="status">
+        Thanks — we’ll review your request and follow up with next steps.
+      </p>
+    );
+  }
+
+  if (status === "invalid") {
+    return (
+      <p className="form-alert error full" role="alert">
+        Please complete the required fields and select at least one type of help.
+      </p>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <p className="form-alert error full" role="alert">
+        We could not save your request. Please try again in a moment.
+      </p>
+    );
+  }
+
+  return null;
 }
 
 function ProviderForm() {
