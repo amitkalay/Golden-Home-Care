@@ -7,6 +7,7 @@ type FamilyLead = {
   zipCode: string;
   relationship: string;
   helpNeeded: string[];
+  helpNeededOther: string;
   frequency: string;
   neededTimeline: string;
   notes: string;
@@ -39,10 +40,11 @@ async function ensureFamilyLeadsTable() {
       created_at timestamptz not null default now(),
       name text not null,
       email text not null,
-      phone text not null,
+      phone text,
       zip_code varchar(10),
       relationship text not null,
       help_needed jsonb not null,
+      help_needed_other text,
       frequency text not null,
       needed_timeline text not null,
       notes text,
@@ -50,6 +52,9 @@ async function ensureFamilyLeadsTable() {
       status text not null default 'new'
     )
   `;
+
+  await sql`ALTER TABLE family_leads ALTER COLUMN phone DROP NOT NULL`;
+  await sql`ALTER TABLE family_leads ADD COLUMN IF NOT EXISTS help_needed_other text`;
 }
 
 export async function insertFamilyLead(lead: FamilyLead) {
@@ -64,6 +69,7 @@ export async function insertFamilyLead(lead: FamilyLead) {
       zip_code,
       relationship,
       help_needed,
+      help_needed_other,
       frequency,
       needed_timeline,
       notes
@@ -71,10 +77,11 @@ export async function insertFamilyLead(lead: FamilyLead) {
     VALUES (
       ${lead.name},
       ${lead.email},
-      ${lead.phone},
+      ${lead.phone || null},
       ${lead.zipCode || null},
       ${lead.relationship},
       ${JSON.stringify(lead.helpNeeded)}::jsonb,
+      ${lead.helpNeededOther || null},
       ${lead.frequency},
       ${lead.neededTimeline},
       ${lead.notes || null}

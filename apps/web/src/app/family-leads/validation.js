@@ -2,7 +2,7 @@ export const helpNeededOptions = [
   { value: "companionship", label: "Companionship" },
   { value: "errands", label: "Errands" },
   { value: "walks", label: "Walks" },
-  { value: "medication-reminders", label: "Medication reminders" },
+  { value: "meal-prep", label: "Meal Prep" },
 ];
 
 export const relationshipOptions = [
@@ -13,7 +13,7 @@ export const relationshipOptions = [
   "Other",
 ];
 
-export const frequencyOptions = ["One-time", "Weekly", "2x/week", "Unsure"];
+export const frequencyOptions = ["On Demand", "Weekly", "Monthly", "Unsure"];
 
 export const neededTimelineOptions = [
   "As soon as possible",
@@ -31,6 +31,7 @@ const MAX_LENGTHS = {
   relationship: 80,
   frequency: 40,
   neededTimeline: 80,
+  helpNeededOther: 160,
   notes: 1000,
 };
 
@@ -62,20 +63,27 @@ export function parseFamilyLeadForm(input) {
     return { ok: true, spam: true, data: null, errors: {} };
   }
 
+  const presetHelpNeeded = getValues(input, "helpNeeded");
+  const helpNeededOther = getValue(input, "helpNeededOther");
+  const helpNeeded = Array.from(
+    new Set(helpNeededOther ? [...presetHelpNeeded, helpNeededOther] : presetHelpNeeded),
+  );
+
   const data = {
     name: getValue(input, "name"),
     email: getValue(input, "email").toLowerCase(),
     phone: getValue(input, "phone"),
     zipCode: getValue(input, "zipCode"),
     relationship: getValue(input, "relationship"),
-    helpNeeded: Array.from(new Set(getValues(input, "helpNeeded"))),
+    helpNeeded,
+    helpNeededOther,
     frequency: getValue(input, "frequency"),
     neededTimeline: getValue(input, "neededTimeline"),
     notes: getValue(input, "notes"),
   };
   const errors = {};
 
-  for (const key of ["name", "email", "phone", "relationship", "frequency", "neededTimeline"]) {
+  for (const key of ["name", "email", "relationship", "frequency", "neededTimeline"]) {
     if (!data[key]) {
       errors[key] = "Required";
     }
@@ -94,7 +102,7 @@ export function parseFamilyLeadForm(input) {
     errors.zipCode = "Enter a valid ZIP code";
   }
 
-  const invalidHelpNeeded = data.helpNeeded.some((value) => !HELP_VALUES.has(value));
+  const invalidHelpNeeded = presetHelpNeeded.some((value) => !HELP_VALUES.has(value));
   if (!data.helpNeeded.length || invalidHelpNeeded) {
     errors.helpNeeded = "Select at least one option";
   }

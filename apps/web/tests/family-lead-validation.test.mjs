@@ -10,7 +10,8 @@ function validForm(overrides = {}) {
     phone: "(555) 123-4567",
     zipCode: "94107",
     relationship: "Adult child",
-    helpNeeded: ["companionship", "errands"],
+    helpNeeded: ["companionship", "meal-prep"],
+    helpNeededOther: "",
     frequency: "Weekly",
     neededTimeline: "This week",
     notes: "Looking for a steady weekly visit.",
@@ -29,12 +30,19 @@ function validForm(overrides = {}) {
 }
 
 describe("family lead validation", () => {
-  it("normalizes and accepts a valid lead", () => {
+  it("normalizes and accepts a valid lead with preset help selections", () => {
     const result = parseFamilyLeadForm(validForm());
 
     assert.equal(result.ok, true);
     assert.equal(result.data.email, "jane@example.com");
-    assert.deepEqual(result.data.helpNeeded, ["companionship", "errands"]);
+    assert.deepEqual(result.data.helpNeeded, ["companionship", "meal-prep"]);
+  });
+
+  it("accepts leads without a phone number", () => {
+    const result = parseFamilyLeadForm(validForm({ phone: "" }));
+
+    assert.equal(result.ok, true);
+    assert.equal(result.errors.phone, undefined);
   });
 
   it("rejects missing required fields", () => {
@@ -53,6 +61,31 @@ describe("family lead validation", () => {
 
   it("rejects submissions without selected help", () => {
     const result = parseFamilyLeadForm(validForm({ helpNeeded: [] }));
+
+    assert.equal(result.ok, false);
+    assert.equal(result.errors.helpNeeded, "Select at least one option");
+  });
+
+  it("accepts custom help needed text without a checked box", () => {
+    const result = parseFamilyLeadForm(validForm({ helpNeeded: [], helpNeededOther: "Light gardening" }));
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.data.helpNeeded, ["Light gardening"]);
+    assert.equal(result.data.helpNeededOther, "Light gardening");
+  });
+
+  it("records preset and custom help needed values together", () => {
+    const result = parseFamilyLeadForm(validForm({ helpNeeded: ["walks"], helpNeededOther: "Light housekeeping" }));
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.data.helpNeeded, ["walks", "Light housekeeping"]);
+    assert.equal(result.data.helpNeededOther, "Light housekeeping");
+  });
+
+  it("rejects a blank custom help checkbox without preset selections", () => {
+    const result = parseFamilyLeadForm(
+      validForm({ helpNeeded: [], helpNeededOther: "", helpNeededOtherSelected: "true" }),
+    );
 
     assert.equal(result.ok, false);
     assert.equal(result.errors.helpNeeded, "Select at least one option");

@@ -16,9 +16,11 @@ describe("homepage", () => {
     assert.match(homepage, /ZIP code/);
     assert.match(homepage, /Relationship to older adult/);
     assert.match(homepage, /Help needed/);
+    assert.match(homepage, /Other help needed/);
+    assert.match(homepage, /Something else/);
     assert.match(homepage, /How often\?/);
     assert.match(homepage, /When do you need help\?/);
-    assert.match(homepage, /Biggest concern \/ notes/);
+    assert.match(homepage, /Additional notes or feedback/);
     assert.match(homepage, /Find care near me/);
     assert.match(
       homepage,
