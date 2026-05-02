@@ -2,7 +2,6 @@ import Image from "next/image";
 import {
   BadgeCheck,
   Bell,
-  BriefcaseMedical,
   CalendarCheck2,
   CalendarDays,
   CheckCircle2,
@@ -18,6 +17,7 @@ import {
   Search,
   ShieldCheck,
   ShoppingBag,
+  Utensils,
   UserRound,
   UsersRound,
   type LucideIcon,
@@ -50,9 +50,9 @@ const services = [
     tone: "gold",
   },
   {
-    title: "Medication reminders",
-    copy: "Reminders to help keep routines on track.",
-    icon: BriefcaseMedical,
+    title: "Meal Prep",
+    copy: "Simple meal prep support to keep daily routines easier.",
+    icon: Utensils,
     tone: "sage",
   },
 ];
@@ -106,9 +106,6 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <a href="#faq">FAQ</a>
           <a href="#signin">Sign In</a>
         </nav>
-        <a className="nav-cta" href="#start">
-          Find care near me
-        </a>
       </header>
 
       <section className="hero">
@@ -304,8 +301,8 @@ function CareForm({ status }: { status?: string }) {
         <input name="email" type="email" placeholder="you@example.com" autoComplete="email" required />
       </label>
       <label>
-        Phone
-        <input name="phone" type="tel" placeholder="(555) 123-4567" autoComplete="tel" required />
+        Phone <span className="optional-text">Optional</span>
+        <input name="phone" type="tel" placeholder="(555) 123-4567" autoComplete="tel" />
       </label>
       <label>
         ZIP code <span className="optional-text">Optional</span>
@@ -332,6 +329,17 @@ function CareForm({ status }: { status?: string }) {
             <span>{option.label}</span>
           </label>
         ))}
+        <label className="help-freeform">
+          <span className="sr-only">Other help needed</span>
+          <input name="helpNeededOtherSelected" type="checkbox" value="true" aria-label="Other help needed" />
+          <input
+            name="helpNeededOther"
+            type="text"
+            aria-label="Other help needed"
+            placeholder="Something else"
+            maxLength={160}
+          />
+        </label>
       </fieldset>
       <label>
         How often?
@@ -360,16 +368,15 @@ function CareForm({ status }: { status?: string }) {
         </select>
       </label>
       <label className="full">
-        Biggest concern / notes <span className="optional-text">Optional</span>
-        <textarea name="notes" placeholder="Share anything helpful for matching non-medical support." rows={4} />
+        Additional notes or feedback <span className="optional-text">Optional</span>
+        <textarea name="notes" placeholder="Share anything helpful for us to better support your needs." rows={4} />
       </label>
       <button className="button button-primary form-button full" type="submit">
         Find care near me
       </button>
       <LeadStatusMessage status={status} />
       <p className="form-note">
-        <Heart size={18} /> Companionship, errands, walks, and medication
-        reminders.
+        <Heart size={18} /> Companionship, errands, walks, and meal prep.
       </p>
     </form>
   );

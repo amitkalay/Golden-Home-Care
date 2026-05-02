@@ -471,6 +471,18 @@ textarea {
   font-weight: 500;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .checkbox-group {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -506,6 +518,19 @@ textarea {
   width: 16px;
   height: 16px;
   accent-color: var(--deep);
+}
+
+.checkbox-group .help-freeform {
+  gap: 8px;
+}
+
+.checkbox-group .help-freeform input[type="text"] {
+  flex: 1;
+  height: 100%;
+  min-height: 36px;
+  border: 0;
+  padding: 0;
+  min-width: 0;
 }
 
 .honeypot {
