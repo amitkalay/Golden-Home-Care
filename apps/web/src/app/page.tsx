@@ -5,7 +5,6 @@ import {
   CalendarCheck2,
   CalendarDays,
   CheckCircle2,
-  ChevronDown,
   ClipboardCheck,
   DollarSign,
   Footprints,
@@ -22,13 +21,18 @@ import {
   UsersRound,
   type LucideIcon,
 } from "lucide-react";
-import { submitFamilyLead } from "./actions";
+import { submitFamilyLead, submitServiceProviderLead } from "./actions";
 import {
   frequencyOptions,
   helpNeededOptions,
   neededTimelineOptions,
   relationshipOptions,
 } from "./family-leads/validation.js";
+import {
+  availabilityOptions,
+  providerServiceOptions,
+  seniorCareExperienceOptions,
+} from "./provider-leads/validation.js";
 
 const services = [
   {
@@ -81,12 +85,16 @@ const trustItems = [
 type HomePageProps = {
   searchParams?: Promise<{
     lead?: string | string[];
+    providerLead?: string | string[];
   }>;
 };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = searchParams ? await searchParams : {};
   const leadStatus = Array.isArray(params.lead) ? params.lead[0] : params.lead;
+  const providerLeadStatus = Array.isArray(params.providerLead)
+    ? params.providerLead[0]
+    : params.providerLead;
 
   return (
     <main className="site-shell">
@@ -178,7 +186,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
         <div className="forms-grid">
           <CareForm status={leadStatus} />
-          <ProviderForm />
+          <ProviderForm status={providerLeadStatus} />
         </div>
       </section>
 
@@ -410,9 +418,37 @@ function LeadStatusMessage({ status }: { status?: string }) {
   return null;
 }
 
-function ProviderForm() {
+function ProviderLeadStatusMessage({ status }: { status?: string }) {
+  if (status === "success") {
+    return (
+      <p className="form-alert success full" role="status">
+        Thanks — we’ll review your application and contact you if there’s a fit.
+      </p>
+    );
+  }
+
+  if (status === "invalid") {
+    return (
+      <p className="form-alert error full" role="alert">
+        Please complete the required fields and select at least one service.
+      </p>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <p className="form-alert error full" role="alert">
+        We could not save your application. Please try again in a moment.
+      </p>
+    );
+  }
+
+  return null;
+}
+
+function ProviderForm({ status }: { status?: string }) {
   return (
-    <form className="form-card provider-card" aria-label="Become a provider">
+    <form className="form-card provider-card" aria-label="Become a provider" action={submitServiceProviderLead}>
       <div className="form-heading">
         <span className="icon-bubble deep">
           <UserRound size={34} />
@@ -422,48 +458,101 @@ function ProviderForm() {
           <p>For companions who want to support older adults in their community.</p>
         </div>
       </div>
-      <label className="full">
-        Your location
-        <input type="text" placeholder="City, State or ZIP code" />
+      <label className="honeypot" aria-hidden="true">
+        Company website
+        <input name="providerCompanyWebsite" type="text" tabIndex={-1} autoComplete="off" />
       </label>
-      <label className="full input-with-prefix">
+      <label>
+        Name
+        <input name="name" type="text" placeholder="Your name" autoComplete="name" required />
+      </label>
+      <label>
+        Email
+        <input name="email" type="email" placeholder="you@example.com" autoComplete="email" required />
+      </label>
+      <label>
+        Phone <span className="optional-text">Optional</span>
+        <input name="phone" type="tel" placeholder="(555) 123-4567" autoComplete="tel" />
+      </label>
+      <label>
+        ZIP code / service area
+        <input name="serviceArea" type="text" placeholder="City, State or ZIP code" autoComplete="postal-code" required />
+      </label>
+      <label className="input-with-prefix">
         Hourly rate
         <span>$</span>
-        <input type="text" placeholder="Enter your hourly rate" inputMode="decimal" />
+        <input name="hourlyRate" type="text" placeholder="Enter your hourly rate" inputMode="decimal" required />
       </label>
-      <SelectLabel label="Senior-care experience" placeholder="Select experience level" />
-      <SelectLabel label="Services offered" placeholder="Select services" />
-      <SelectLabel label="Availability" placeholder="Select availability" />
       <label>
-        Your email
-        <input type="email" placeholder="you@example.com" />
+        Senior-care experience
+        <select name="seniorCareExperience" defaultValue="" required>
+          <option value="" disabled>
+            Select experience level
+          </option>
+          {seniorCareExperienceOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
       </label>
-      <button className="button button-outline form-button full" type="button">
+      <fieldset className="checkbox-group full">
+        <legend>Services you can offer</legend>
+        {providerServiceOptions.map((option) => (
+          <label key={option.value}>
+            <input name="servicesOffered" type="checkbox" value={option.value} />
+            <span>{option.label}</span>
+          </label>
+        ))}
+        <label className="help-freeform">
+          <span className="sr-only">Other services you can offer</span>
+          <input name="servicesOfferedOtherSelected" type="checkbox" value="true" aria-label="Other services you can offer" />
+          <input
+            name="servicesOfferedOther"
+            type="text"
+            aria-label="Other services you can offer"
+            placeholder="Something else"
+            maxLength={160}
+          />
+        </label>
+      </fieldset>
+      <label>
+        Availability
+        <select name="availability" defaultValue="" required>
+          <option value="" disabled>
+            Select availability
+          </option>
+          {availabilityOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </label>
+      <fieldset className="radio-group">
+        <legend>Willing to complete background check?</legend>
+        <label>
+          <input name="backgroundCheckWilling" type="radio" value="yes" required />
+          <span>Yes</span>
+        </label>
+        <label>
+          <input name="backgroundCheckWilling" type="radio" value="no" required />
+          <span>No</span>
+        </label>
+      </fieldset>
+      <label className="full">
+        Notes <span className="optional-text">Optional</span>
+        <textarea name="notes" placeholder="Share anything helpful about your experience or availability." rows={4} />
+      </label>
+      <button className="button button-outline form-button full" type="submit">
         Apply to join
       </button>
+      <ProviderLeadStatusMessage status={status} />
       <p className="form-note full">
         <BadgeCheck size={18} /> Set your own rates and choose the services you
         offer.
       </p>
     </form>
-  );
-}
-
-function SelectLabel({
-  label,
-  placeholder,
-}: {
-  label: string;
-  placeholder: string;
-}) {
-  return (
-    <label className="select-label">
-      {label}
-      <span>
-        {placeholder}
-        <ChevronDown size={16} />
-      </span>
-    </label>
   );
 }
 

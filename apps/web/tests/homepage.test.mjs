@@ -8,6 +8,10 @@ describe("homepage", () => {
       new URL("../src/app/page.tsx", import.meta.url),
       "utf8",
     );
+    const providerValidation = await readFile(
+      new URL("../src/app/provider-leads/validation.js", import.meta.url),
+      "utf8",
+    );
 
     assert.match(homepage, /Golden Home Care/);
     assert.match(homepage, /Name/);
@@ -25,6 +29,20 @@ describe("homepage", () => {
     assert.match(
       homepage,
       /Thanks — we’ll review your request and follow up with next steps\./,
+    );
+    assert.match(homepage, /Become a provider/);
+    assert.match(homepage, /ZIP code \/ service area/);
+    assert.match(homepage, /Hourly rate/);
+    assert.match(homepage, /Services you can offer/);
+    assert.match(providerValidation, /Gardening/);
+    assert.match(homepage, /Senior-care experience/);
+    assert.match(homepage, /Availability/);
+    assert.match(homepage, /Willing to complete background check\?/);
+    assert.match(homepage, /Notes/);
+    assert.match(homepage, /Apply to join/);
+    assert.match(
+      homepage,
+      /Thanks — we’ll review your application and contact you if there’s a fit\./,
     );
   });
 });
