@@ -479,8 +479,7 @@ function ProviderForm({ status }: { status?: string }) {
         <input name="serviceArea" type="text" placeholder="City, State or ZIP code" autoComplete="postal-code" required />
       </label>
       <label className="input-with-prefix">
-        Hourly rate
-        <span>$</span>
+        Hourly rate ($/hour)
         <input name="hourlyRate" type="text" placeholder="Enter your hourly rate" inputMode="decimal" required />
       </label>
       <label>
