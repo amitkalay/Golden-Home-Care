@@ -111,8 +111,8 @@ export function parseServiceProviderLeadForm(input) {
     errors.phone = "Enter a valid phone number";
   }
 
-  if (data.hourlyRate && !/^\$?\d+(\.\d{1,2})?$/.test(data.hourlyRate)) {
-    errors.hourlyRate = "Enter a valid hourly rate";
+  if (data.hourlyRate && !/^\d+$/.test(data.hourlyRate)) {
+    errors.hourlyRate = "Enter a whole-number hourly rate";
   }
 
   const invalidServices = presetServices.some((value) => !SERVICE_VALUES.has(value));

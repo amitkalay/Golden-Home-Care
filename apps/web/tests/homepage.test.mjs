@@ -26,10 +26,10 @@ describe("homepage", () => {
     assert.match(homepage, /When do you need help\?/);
     assert.match(homepage, /Additional notes or feedback/);
     assert.match(homepage, /Find care near me/);
-    assert.match(
-      homepage,
-      /Thanks — we’ll review your request and follow up with next steps\./,
-    );
+    const acknowledgement =
+      "We appreciate your help! Your survey responses will directly guide how we build this platform to ensure it meets your needs. We’ll be in touch with next steps as we develop this service.";
+
+    assert.equal(homepage.split(acknowledgement).length - 1, 1);
     assert.match(homepage, /Become a provider/);
     assert.match(homepage, /ZIP code \/ service area/);
     assert.match(homepage, /Hourly rate/);
@@ -40,9 +40,8 @@ describe("homepage", () => {
     assert.match(homepage, /Willing to complete background check\?/);
     assert.match(homepage, /Notes/);
     assert.match(homepage, /Apply to join/);
-    assert.match(
-      homepage,
-      /Thanks — we’ll review your application and contact you if there’s a fit\./,
-    );
+    assert.equal(homepage.split("{SURVEY_ACKNOWLEDGEMENT}").length - 1, 2);
+    assert.match(homepage, /type="number"/);
+    assert.match(homepage, /step="1"/);
   });
 });
