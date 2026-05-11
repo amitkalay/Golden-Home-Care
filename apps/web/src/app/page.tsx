@@ -82,6 +82,9 @@ const trustItems = [
   },
 ];
 
+const SURVEY_ACKNOWLEDGEMENT =
+  "We appreciate your help! Your survey responses will directly guide how we build this platform to ensure it meets your needs. We’ll be in touch with next steps as we develop this service.";
+
 type HomePageProps = {
   searchParams?: Promise<{
     lead?: string | string[];
@@ -394,7 +397,7 @@ function LeadStatusMessage({ status }: { status?: string }) {
   if (status === "success") {
     return (
       <p className="form-alert success full" role="status">
-        Thanks — we’ll review your request and follow up with next steps.
+        {SURVEY_ACKNOWLEDGEMENT}
       </p>
     );
   }
@@ -422,7 +425,7 @@ function ProviderLeadStatusMessage({ status }: { status?: string }) {
   if (status === "success") {
     return (
       <p className="form-alert success full" role="status">
-        Thanks — we’ll review your application and contact you if there’s a fit.
+        {SURVEY_ACKNOWLEDGEMENT}
       </p>
     );
   }
@@ -480,7 +483,15 @@ function ProviderForm({ status }: { status?: string }) {
       </label>
       <label className="input-with-prefix">
         Hourly rate ($/hour)
-        <input name="hourlyRate" type="text" placeholder="Enter your hourly rate" inputMode="decimal" required />
+        <input
+          name="hourlyRate"
+          type="number"
+          placeholder="Enter your hourly rate"
+          inputMode="numeric"
+          min="0"
+          step="1"
+          required
+        />
       </label>
       <label>
         Senior-care experience

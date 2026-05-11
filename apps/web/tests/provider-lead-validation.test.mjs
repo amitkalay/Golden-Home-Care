@@ -9,7 +9,7 @@ function validForm(overrides = {}) {
     email: "SAM@EXAMPLE.COM",
     phone: "(555) 222-3333",
     serviceArea: "94107",
-    hourlyRate: "32.50",
+    hourlyRate: "32",
     servicesOffered: ["meal-prep", "companionship"],
     servicesOfferedOther: "",
     seniorCareExperience: "1-2 years",
@@ -52,6 +52,27 @@ describe("service provider lead validation", () => {
 
     assert.equal(result.ok, false);
     assert.equal(result.errors.email, "Enter a valid email");
+  });
+
+  it("rejects non-numeric hourly rates", () => {
+    const result = parseServiceProviderLeadForm(validForm({ hourlyRate: "thirty two" }));
+
+    assert.equal(result.ok, false);
+    assert.equal(result.errors.hourlyRate, "Enter a whole-number hourly rate");
+  });
+
+  it("rejects decimal hourly rates", () => {
+    const result = parseServiceProviderLeadForm(validForm({ hourlyRate: "32.50" }));
+
+    assert.equal(result.ok, false);
+    assert.equal(result.errors.hourlyRate, "Enter a whole-number hourly rate");
+  });
+
+  it("rejects currency-formatted hourly rates", () => {
+    const result = parseServiceProviderLeadForm(validForm({ hourlyRate: "$32" }));
+
+    assert.equal(result.ok, false);
+    assert.equal(result.errors.hourlyRate, "Enter a whole-number hourly rate");
   });
 
   it("rejects missing required fields", () => {
