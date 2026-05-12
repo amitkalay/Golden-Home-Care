@@ -121,7 +121,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <section className="hero">
         <div className="hero-copy">
-          <h1>Trusted support for aging parents at home.</h1>
+          <h1>Concierge senior center platform bringing premium services and entertainment to you.</h1>
           <p>
             Golden Home Care helps families book trusted local companions for aging
             parents who want to stay independent, with recurring visits,
@@ -135,49 +135,54 @@ export default async function HomePage({ searchParams }: HomePageProps) {
               Become a provider
             </a>
           </div>
-          <div className="trust-row" aria-label="Golden Home Care trust highlights">
-            <span>
-              <ShieldCheck size={25} /> Background-checked companions
-            </span>
-            <span>
-              <DollarSign size={25} /> Provider-set rates
-            </span>
-            <span>
-              <HandHeart size={25} /> Non-medical support only
-            </span>
-          </div>
         </div>
 
         <div className="hero-visual">
-          <Image
-            src="/hero-care.png"
-            alt="A companion smiling with an older adult at home"
-            fill
-            priority
-            sizes="(min-width: 900px) 55vw, 100vw"
-          />
-          <aside className="visit-card" aria-label="Upcoming visit details">
-            <h2>
-              <CalendarDays size={22} /> Upcoming visit
-            </h2>
-            <p>
-              <CalendarCheck2 size={16} /> May 22, 2025
-            </p>
-            <p>
-              <ClockIcon /> 10:00 AM - 12:00 PM
-            </p>
-            <p>
-              <UserRound size={16} /> Sarah J.
-            </p>
-            <strong>
-              <CheckCircle2 size={16} /> Confirmed
-            </strong>
-          </aside>
-          <aside className="rate-card" aria-label="Starting provider rate">
-            <span>Starting at</span>
-            <strong>$34/hr</strong>
-            <p>Provider-set rate</p>
-          </aside>
+          <div className="hero-media">
+            <Image
+              src="/hero-concierge-services.png"
+              alt="Older adults enjoying piano instruction and supportive help at home"
+              fill
+              priority
+              sizes="(min-width: 900px) 52vw, 100vw"
+            />
+          </div>
+          <div className="hero-info-row">
+            <aside className="visit-card" aria-label="Upcoming visit details">
+              <h2>
+                <CalendarDays size={22} /> Upcoming visit
+              </h2>
+              <p>
+                <CalendarCheck2 size={16} /> May 22, 2026
+              </p>
+              <p>
+                <ClockIcon /> 10:00 AM - 12:00 PM
+              </p>
+              <p>
+                <UserRound size={16} /> Sarah J.
+              </p>
+              <strong>
+                <CheckCircle2 size={16} /> Confirmed
+              </strong>
+            </aside>
+            <aside className="rate-card" aria-label="Starting provider rate">
+              <span>Starting at</span>
+              <strong>$34/hr</strong>
+              <p>Provider-set rate</p>
+            </aside>
+          </div>
+        </div>
+
+        <div className="trust-row" aria-label="Golden Home Care trust highlights">
+          <span>
+            <ShieldCheck size={25} /> Background-checked companions
+          </span>
+          <span>
+            <DollarSign size={25} /> Provider-set rates
+          </span>
+          <span>
+            <HandHeart size={25} /> Non-medical support only
+          </span>
         </div>
       </section>
 
@@ -280,7 +285,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <span>f</span>
           <span>ig</span>
           <span>in</span>
-          <p>© 2025 Golden Home Care, Inc. All rights reserved.</p>
+          <p>© 2026 Golden Home Care, Inc. All rights reserved.</p>
         </div>
       </footer>
     </main>

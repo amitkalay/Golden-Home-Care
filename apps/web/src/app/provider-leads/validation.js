@@ -1,9 +1,10 @@
 export const providerServiceOptions = [
   { value: "meal-prep", label: "Meal Prep" },
-  { value: "gardening", label: "Gardening" },
   { value: "companionship", label: "Companionship" },
   { value: "errands", label: "Errands" },
-  { value: "walks", label: "Walks" },
+  { value: "pickleball-lessons", label: "Pickleball Lessons" },
+  { value: "music-lessons", label: "Music Lessons" },
+  { value: "arts-and-crafts", label: "Arts & Crafts" },
 ];
 
 export const seniorCareExperienceOptions = [

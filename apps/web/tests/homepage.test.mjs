@@ -12,8 +12,18 @@ describe("homepage", () => {
       new URL("../src/app/provider-leads/validation.js", import.meta.url),
       "utf8",
     );
+    const familyValidation = await readFile(
+      new URL("../src/app/family-leads/validation.js", import.meta.url),
+      "utf8",
+    );
+    const tagline =
+      "Concierge senior center platform bringing premium services and entertainment to you.";
 
     assert.match(homepage, /Golden Home Care/);
+    assert.ok(homepage.includes(tagline));
+    assert.equal(homepage.includes("Trusted support for aging parents at home"), false);
+    assert.ok(homepage.includes('src="/hero-concierge-services.png"'));
+    assert.ok(homepage.includes('alt="Older adults enjoying piano instruction and supportive help at home"'));
     assert.match(homepage, /Name/);
     assert.match(homepage, /Email/);
     assert.match(homepage, /Phone/);
@@ -34,7 +44,14 @@ describe("homepage", () => {
     assert.match(homepage, /ZIP code \/ service area/);
     assert.match(homepage, /Hourly rate/);
     assert.match(homepage, /Services you can offer/);
-    assert.match(providerValidation, /Gardening/);
+    assert.equal(providerValidation.includes("Gardening"), false);
+    assert.equal(providerValidation.includes('value: "walks"'), false);
+    for (const label of ["Meal Prep", "Companionship", "Errands", "Pickleball Lessons", "Music Lessons", "Arts & Crafts"]) {
+      assert.ok(providerValidation.includes(label));
+    }
+    for (const label of ["Pickleball Lessons", "Music Lessons", "Arts & Crafts"]) {
+      assert.ok(familyValidation.includes(label));
+    }
     assert.match(homepage, /Senior-care experience/);
     assert.match(homepage, /Availability/);
     assert.match(homepage, /Willing to complete background check\?/);
