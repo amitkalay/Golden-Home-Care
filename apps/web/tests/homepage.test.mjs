@@ -22,6 +22,8 @@ describe("homepage", () => {
     assert.match(homepage, /Golden Home Care/);
     assert.ok(homepage.includes(tagline));
     assert.equal(homepage.includes("Trusted support for aging parents at home"), false);
+    assert.ok(homepage.includes('src="/hero-concierge-services.png"'));
+    assert.ok(homepage.includes('alt="Older adults enjoying piano instruction and supportive help at home"'));
     assert.match(homepage, /Name/);
     assert.match(homepage, /Email/);
     assert.match(homepage, /Phone/);

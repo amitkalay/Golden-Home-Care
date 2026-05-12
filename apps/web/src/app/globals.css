@@ -140,20 +140,25 @@ textarea {
 
 .hero {
   display: grid;
-  grid-template-columns: minmax(330px, 0.78fr) minmax(470px, 1.08fr);
+  grid-template-areas:
+    "copy visual"
+    "trust visual";
+  grid-template-columns: minmax(330px, 0.86fr) minmax(520px, 1.14fr);
+  align-items: center;
+  gap: 24px 36px;
   width: min(100%, 1180px);
   margin: 0 auto;
-  min-height: 455px;
-  padding-left: 28px;
+  padding: 18px 28px 10px;
 }
 
 .hero-copy {
+  grid-area: copy;
   position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 22px 34px 28px 0;
+  padding: 8px 0 0;
 }
 
 .hero h1,
@@ -172,42 +177,43 @@ textarea {
 }
 
 .hero h1 {
-  max-width: 560px;
-  font-size: clamp(41px, 5.2vw, 59px);
-  line-height: 1.05;
+  max-width: 540px;
+  font-size: clamp(38px, 4.1vw, 48px);
+  line-height: 1.08;
 }
 
 .hero-copy > p {
-  max-width: 520px;
-  margin: 18px 0 0;
+  max-width: 500px;
+  margin: 16px 0 0;
   color: #39433d;
-  font-size: 17px;
-  line-height: 1.55;
+  font-size: 16px;
+  line-height: 1.5;
 }
 
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 24px;
-  margin-top: 28px;
+  gap: 18px;
+  margin-top: 24px;
 }
 
 .hero-actions .button {
-  min-width: 194px;
+  min-width: 180px;
 }
 
 .trust-row {
+  grid-area: trust;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 14px;
-  margin-top: 26px;
+  gap: 12px;
+  margin-top: 0;
 }
 
 .trust-row span {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 62px;
+  min-height: 66px;
   padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -224,32 +230,38 @@ textarea {
 }
 
 .hero-visual {
+  grid-area: visual;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.hero-media {
   position: relative;
-  min-height: 455px;
+  aspect-ratio: 16 / 9;
   overflow: hidden;
+  border: 1px solid rgba(229, 216, 190, 0.95);
+  border-radius: var(--radius);
+  background: #f6ead9;
+  box-shadow: var(--shadow);
 }
 
-.hero-visual::before {
-  position: absolute;
-  z-index: 1;
-  inset: 0 auto 0 0;
-  width: 23%;
-  content: "";
-  background: linear-gradient(90deg, #fffdf8 0%, rgba(255, 253, 248, 0.82) 40%, transparent 100%);
-}
-
-.hero-visual img {
-  object-fit: cover;
+.hero-media img {
+  object-fit: contain;
   object-position: center;
   filter: saturate(1.04) contrast(1.02);
 }
 
+.hero-info-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.58fr);
+  gap: 14px;
+}
+
 .visit-card,
 .rate-card {
-  position: absolute;
-  z-index: 2;
-  right: clamp(24px, 5vw, 48px);
-  width: 205px;
+  width: 100%;
   border: 1px solid rgba(229, 216, 190, 0.95);
   border-radius: var(--radius);
   background: rgba(255, 253, 248, 0.96);
@@ -257,15 +269,14 @@ textarea {
 }
 
 .visit-card {
-  top: 62px;
-  padding: 20px;
+  padding: 16px 18px;
 }
 
 .visit-card h2 {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 0 0 16px;
+  margin: 0 0 10px;
   color: var(--ink);
   font-size: 17px;
 }
@@ -278,7 +289,7 @@ textarea {
   display: flex;
   align-items: center;
   gap: 11px;
-  margin: 13px 0;
+  margin: 8px 0;
   color: #28302c;
   font-size: 14px;
 }
@@ -287,7 +298,7 @@ textarea {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  margin-top: 3px;
+  margin-top: 4px;
   padding: 8px 18px;
   border-radius: 999px;
   background: #dce9df;
@@ -296,9 +307,11 @@ textarea {
 }
 
 .rate-card {
-  right: clamp(42px, 7vw, 66px);
-  bottom: 40px;
-  padding: 17px 18px 18px;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 16px 18px;
   text-align: center;
 }
 
@@ -312,7 +325,7 @@ textarea {
   display: block;
   color: var(--deep);
   font-family: Georgia, "Times New Roman", serif;
-  font-size: 39px;
+  font-size: 36px;
   font-weight: 400;
   line-height: 1.05;
 }
@@ -915,8 +928,13 @@ textarea {
   }
 
   .hero {
+    grid-template-areas:
+      "copy"
+      "visual"
+      "trust";
     grid-template-columns: 1fr;
-    padding: 0 28px;
+    gap: 24px;
+    padding: 10px 28px 0;
   }
 
   .hero-copy {
@@ -924,7 +942,6 @@ textarea {
   }
 
   .hero-visual {
-    min-height: 390px;
     border-radius: var(--radius);
   }
 
@@ -974,6 +991,7 @@ textarea {
 
   .hero {
     grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
   }
 
   .hero-copy,
@@ -986,7 +1004,7 @@ textarea {
 
   .hero h1 {
     max-width: 100%;
-    font-size: 36px;
+    font-size: 34px;
     overflow-wrap: break-word;
   }
 
@@ -995,9 +1013,13 @@ textarea {
     overflow-wrap: break-word;
   }
 
-  .hero-actions,
-  .trust-row {
+  .trust-row,
+  .hero-info-row {
     grid-template-columns: 1fr;
+  }
+
+  .hero-actions {
+    gap: 12px;
   }
 
   .hero-actions .button,
@@ -1005,18 +1027,17 @@ textarea {
     width: 100%;
   }
 
-  .hero-visual {
-    min-height: 430px;
+  .hero-media {
+    width: 100%;
   }
 
-  .visit-card {
-    top: 24px;
-    right: 18px;
-  }
-
+  .visit-card,
   .rate-card {
-    right: 28px;
-    bottom: 22px;
+    padding: 14px 16px;
+  }
+
+  .rate-card strong {
+    font-size: 34px;
   }
 
   .section-title {
