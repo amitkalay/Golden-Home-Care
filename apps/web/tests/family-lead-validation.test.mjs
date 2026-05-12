@@ -38,6 +38,21 @@ describe("family lead validation", () => {
     assert.deepEqual(result.data.helpNeeded, ["companionship", "meal-prep"]);
   });
 
+  it("accepts premium activity and lesson help selections", () => {
+    const result = parseFamilyLeadForm(
+      validForm({
+        helpNeeded: ["pickleball-lessons", "music-lessons", "arts-and-crafts"],
+      }),
+    );
+
+    assert.equal(result.ok, true);
+    assert.deepEqual(result.data.helpNeeded, [
+      "pickleball-lessons",
+      "music-lessons",
+      "arts-and-crafts",
+    ]);
+  });
+
   it("accepts leads without a phone number", () => {
     const result = parseFamilyLeadForm(validForm({ phone: "" }));
 

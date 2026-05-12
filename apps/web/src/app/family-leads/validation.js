@@ -3,6 +3,9 @@ export const helpNeededOptions = [
   { value: "errands", label: "Errands" },
   { value: "walks", label: "Walks" },
   { value: "meal-prep", label: "Meal Prep" },
+  { value: "pickleball-lessons", label: "Pickleball Lessons" },
+  { value: "music-lessons", label: "Music Lessons" },
+  { value: "arts-and-crafts", label: "Arts & Crafts" },
 ];
 
 export const relationshipOptions = [

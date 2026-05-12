@@ -121,7 +121,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <section className="hero">
         <div className="hero-copy">
-          <h1>Trusted support for aging parents at home.</h1>
+          <h1>Concierge senior center platform bringing premium services and entertainment to you.</h1>
           <p>
             Golden Home Care helps families book trusted local companions for aging
             parents who want to stay independent, with recurring visits,
