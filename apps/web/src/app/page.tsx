@@ -153,7 +153,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
                 <CalendarDays size={22} /> Upcoming visit
               </h2>
               <p>
-                <CalendarCheck2 size={16} /> May 22, 2025
+                <CalendarCheck2 size={16} /> May 22, 2026
               </p>
               <p>
                 <ClockIcon /> 10:00 AM - 12:00 PM
@@ -285,7 +285,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <span>f</span>
           <span>ig</span>
           <span>in</span>
-          <p>© 2025 Golden Home Care, Inc. All rights reserved.</p>
+          <p>© 2026 Golden Home Care, Inc. All rights reserved.</p>
         </div>
       </footer>
     </main>
