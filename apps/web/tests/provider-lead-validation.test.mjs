@@ -43,15 +43,15 @@ describe("service provider lead validation", () => {
   it("accepts premium activity and lesson provider services", () => {
     const result = parseServiceProviderLeadForm(
       validForm({
-        servicesOffered: ["pickleball-lessons", "music-lessons", "arts-and-crafts"],
+        servicesOffered: ["walks", "pickleball-lessons", "music-lessons"],
       }),
     );
 
     assert.equal(result.ok, true);
     assert.deepEqual(result.data.servicesOffered, [
+      "walks",
       "pickleball-lessons",
       "music-lessons",
-      "arts-and-crafts",
     ]);
   });
 
@@ -115,7 +115,7 @@ describe("service provider lead validation", () => {
   });
 
   it("rejects removed preset provider services", () => {
-    const result = parseServiceProviderLeadForm(validForm({ servicesOffered: ["walks", "gardening"] }));
+    const result = parseServiceProviderLeadForm(validForm({ servicesOffered: ["arts-and-crafts", "gardening"] }));
 
     assert.equal(result.ok, false);
     assert.equal(result.errors.servicesOffered, "Select at least one service");

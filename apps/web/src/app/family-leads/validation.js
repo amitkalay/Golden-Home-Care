@@ -5,7 +5,6 @@ export const helpNeededOptions = [
   { value: "meal-prep", label: "Meal Prep" },
   { value: "pickleball-lessons", label: "Pickleball Lessons" },
   { value: "music-lessons", label: "Music Lessons" },
-  { value: "arts-and-crafts", label: "Arts & Crafts" },
 ];
 
 export const relationshipOptions = [

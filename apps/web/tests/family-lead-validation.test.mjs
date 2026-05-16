@@ -41,15 +41,15 @@ describe("family lead validation", () => {
   it("accepts premium activity and lesson help selections", () => {
     const result = parseFamilyLeadForm(
       validForm({
-        helpNeeded: ["pickleball-lessons", "music-lessons", "arts-and-crafts"],
+        helpNeeded: ["walks", "pickleball-lessons", "music-lessons"],
       }),
     );
 
     assert.equal(result.ok, true);
     assert.deepEqual(result.data.helpNeeded, [
+      "walks",
       "pickleball-lessons",
       "music-lessons",
-      "arts-and-crafts",
     ]);
   });
 
