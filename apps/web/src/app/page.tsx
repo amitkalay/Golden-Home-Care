@@ -113,9 +113,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <a href="#how">How It Works</a>
           <a href="#services">Services</a>
           <a href="#safety">Safety</a>
-          <a href="#providers">For Providers</a>
+          <a href="/sign-in">For Providers</a>
           <a href="#faq">FAQ</a>
-          <a href="#signin">Sign In</a>
+          <a href="/sign-in">Sign In</a>
         </nav>
       </header>
 
@@ -131,7 +131,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             <a className="button button-primary" href="#start">
               Find care near me
             </a>
-            <a className="button button-secondary" href="#providers">
+            <a className="button button-secondary" href="/sign-in">
               Become a provider
             </a>
           </div>
@@ -272,7 +272,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           <a href="#safety">Safety</a>
         </div>
         <div className="footer-links">
-          <a href="#providers">For Providers</a>
+          <a href="/sign-in">For Providers</a>
           <a href="#faq">FAQ</a>
           <a href="#blog">Blog</a>
         </div>

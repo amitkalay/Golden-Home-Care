@@ -1,11 +1,6 @@
-export const providerServiceOptions = [
-  { value: "meal-prep", label: "Meal Prep" },
-  { value: "companionship", label: "Companionship" },
-  { value: "errands", label: "Errands" },
-  { value: "pickleball-lessons", label: "Pickleball Lessons" },
-  { value: "music-lessons", label: "Music Lessons" },
-  { value: "arts-and-crafts", label: "Arts & Crafts" },
-];
+import { providerServiceOptions } from "../provider/services.js";
+
+export { providerServiceOptions };
 
 export const seniorCareExperienceOptions = [
   "No professional experience",

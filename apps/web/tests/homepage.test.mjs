@@ -8,8 +8,8 @@ describe("homepage", () => {
       new URL("../src/app/page.tsx", import.meta.url),
       "utf8",
     );
-    const providerValidation = await readFile(
-      new URL("../src/app/provider-leads/validation.js", import.meta.url),
+    const providerServices = await readFile(
+      new URL("../src/app/provider/services.js", import.meta.url),
       "utf8",
     );
     const familyValidation = await readFile(
@@ -41,17 +41,19 @@ describe("homepage", () => {
 
     assert.equal(homepage.split(acknowledgement).length - 1, 1);
     assert.match(homepage, /Become a provider/);
+    assert.ok(homepage.includes('href="/sign-in"'));
     assert.match(homepage, /ZIP code \/ service area/);
     assert.match(homepage, /Hourly rate/);
     assert.match(homepage, /Services you can offer/);
-    assert.equal(providerValidation.includes("Gardening"), false);
-    assert.equal(providerValidation.includes('value: "walks"'), false);
-    for (const label of ["Meal Prep", "Companionship", "Errands", "Pickleball Lessons", "Music Lessons", "Arts & Crafts"]) {
-      assert.ok(providerValidation.includes(label));
+    assert.equal(providerServices.includes("Gardening"), false);
+    assert.equal(providerServices.includes("Arts & Crafts"), false);
+    for (const label of ["Meal Prep", "Companionship", "Errands", "Walks", "Pickleball Lessons", "Music Lessons"]) {
+      assert.ok(providerServices.includes(label));
     }
-    for (const label of ["Pickleball Lessons", "Music Lessons", "Arts & Crafts"]) {
+    for (const label of ["Walks", "Pickleball Lessons", "Music Lessons"]) {
       assert.ok(familyValidation.includes(label));
     }
+    assert.equal(familyValidation.includes("Arts & Crafts"), false);
     assert.match(homepage, /Senior-care experience/);
     assert.match(homepage, /Availability/);
     assert.match(homepage, /Willing to complete background check\?/);
