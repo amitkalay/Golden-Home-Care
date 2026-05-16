@@ -28,10 +28,6 @@ async function requireProviderUserId() {
   return userId;
 }
 
-export async function signInWithGoogle() {
-  redirect("/api/auth/signin/google?callbackUrl=/provider/onboarding");
-}
-
 async function uploadProviderPhoto(userId: string, formData: FormData) {
   const photo = formData.get("photo");
 
