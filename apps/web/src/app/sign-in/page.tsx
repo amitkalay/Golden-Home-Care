@@ -7,6 +7,7 @@ const authErrorMessage =
 
 type SignInPageProps = {
   searchParams?: Promise<{
+    callbackUrl?: string | string[];
     error?: string | string[];
   }>;
 };
@@ -14,6 +15,8 @@ type SignInPageProps = {
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const params = searchParams ? await searchParams : {};
   const error = Array.isArray(params.error) ? params.error[0] : params.error;
+  const callbackUrlParam = Array.isArray(params.callbackUrl) ? params.callbackUrl[0] : params.callbackUrl;
+  const callbackUrl = callbackUrlParam?.startsWith("/") ? callbackUrlParam : "/account";
 
   return (
     <main className="auth-shell">
@@ -24,14 +27,14 @@ export default async function SignInPage({ searchParams }: SignInPageProps) {
         <span>Golden Home Care</span>
       </Link>
       <section className="auth-card">
-        <h1>Provider sign in</h1>
-        <p>Sign in with Google to create and manage your Golden Home Care provider profile.</p>
+        <h1>Sign in</h1>
+        <p>Sign in with Google to manage your Golden Home Care account.</p>
         {error ? (
           <p className="form-alert error" role="alert">
             {authErrorMessage}
           </p>
         ) : null}
-        <GoogleSignInButton />
+        <GoogleSignInButton callbackUrl={callbackUrl} />
       </section>
     </main>
   );

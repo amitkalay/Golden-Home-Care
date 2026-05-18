@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 describe("provider sign in", () => {
-  it("starts Google OAuth through the NextAuth client helper", async () => {
+  it("starts Google OAuth through the NextAuth client helper with a callback URL", async () => {
     const signInPage = await readFile(
       new URL("../src/app/sign-in/page.tsx", import.meta.url),
       "utf8",
@@ -18,9 +18,10 @@ describe("provider sign in", () => {
     );
 
     assert.match(googleButton, /"use client"/);
-    assert.match(googleButton, /signIn\("google", \{ callbackUrl: "\/provider\/onboarding" \}\)/);
+    assert.match(googleButton, /callbackUrl = "\/account"/);
+    assert.match(googleButton, /signIn\("google", \{ callbackUrl \}\)/);
+    assert.match(signInPage, /callbackUrlParam\?\.startsWith\("\/"\)/);
     assert.match(signInPage, /Google sign-in could not start/);
     assert.equal(providerActions.includes("/api/auth/signin/google?callbackUrl=/provider/onboarding"), false);
   });
 });
-

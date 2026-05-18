@@ -3,6 +3,7 @@ import Link from "next/link";
 import { BadgeCheck, CalendarCheck2, MessageCircle, Search, UserRound } from "lucide-react";
 import { providerServiceOptions } from "./services.js";
 import type { ProviderProfileRecord } from "./db";
+import { SignOutButton } from "../sign-out-button";
 import {
   saveProviderAvailability,
   saveProviderOnboarding,
@@ -30,6 +31,8 @@ export function ProviderShell({
           <Link href="/provider/availability">Availability</Link>
           <Link href="/provider/messages">Messages</Link>
           <Link href="/providers">Public search</Link>
+          <Link href="/account">Account</Link>
+          <SignOutButton className="nav-link-button" />
         </nav>
       </header>
       <section className="provider-page-heading">
@@ -334,4 +337,3 @@ export function ProviderDashboardCards({ profile }: { profile: ProviderProfileRe
     </div>
   );
 }
-

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import {
   Bell,
   CalendarCheck2,
@@ -19,6 +20,9 @@ import {
   UserRound,
   type LucideIcon,
 } from "lucide-react";
+import { getCurrentUserSession } from "./lib/auth";
+import { GoogleSignInButton } from "./sign-in/google-sign-in-button";
+import { SignOutButton } from "./sign-out-button";
 
 const services = [
   {
@@ -68,25 +72,54 @@ const trustItems = [
   },
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
+  const session = await getCurrentUserSession();
+  const userName = session?.user?.name || session?.user?.email?.split("@")[0] || "there";
+  const providerHref = session?.user?.id ? "/provider/onboarding" : "/sign-in?callbackUrl=/provider/onboarding";
+
   return (
     <main className="site-shell">
       <header className="nav">
-        <a className="brand" href="#" aria-label="Golden Home Care home">
+        <Link className="brand" href="/" aria-label="Golden Home Care home">
           <span className="brand-mark">
             <Home size={34} strokeWidth={1.6} />
             <HandHeart size={28} strokeWidth={1.5} />
           </span>
           <span>Golden Home Care</span>
-        </a>
+        </Link>
         <nav className="nav-links" aria-label="Primary navigation">
           <a href="#how">How It Works</a>
           <a href="#services">Services</a>
           <a href="#safety">Safety</a>
-          <a href="/sign-in">For Providers</a>
+          <a href={providerHref}>For Providers</a>
           <a href="#faq">FAQ</a>
-          <a href="/sign-in">Sign In</a>
         </nav>
+        <div className="nav-account" aria-label="Account">
+          {session?.user?.id ? (
+            <>
+              <Link className="nav-user" href="/account">
+                <span className="nav-avatar">
+                  {session.user.image ? (
+                    <Image src={session.user.image} alt="" fill sizes="36px" />
+                  ) : (
+                    userName.slice(0, 1)
+                  )}
+                </span>
+                <span>Hello, {userName}</span>
+              </Link>
+              <Link className="nav-link-button" href="/provider">
+                Provider
+              </Link>
+              <SignOutButton className="nav-link-button" />
+            </>
+          ) : (
+            <GoogleSignInButton
+              callbackUrl="/account"
+              className="button button-primary nav-auth-button"
+              label="Sign In"
+            />
+          )}
+        </div>
       </header>
 
       <section className="hero">
@@ -101,7 +134,7 @@ export default function HomePage() {
             <a className="button button-primary" href="/providers">
               Find care near me
             </a>
-            <a className="button button-secondary" href="/sign-in">
+            <a className="button button-secondary" href={providerHref}>
               Become a provider
             </a>
           </div>
@@ -211,20 +244,20 @@ export default function HomePage() {
 
       <footer className="footer">
         <div className="footer-brand">
-          <a className="brand" href="#" aria-label="Golden Home Care home">
+          <Link className="brand" href="/" aria-label="Golden Home Care home">
             <span className="brand-mark">
               <Home size={31} strokeWidth={1.6} />
               <HandHeart size={25} strokeWidth={1.5} />
             </span>
             <span>Golden Home Care</span>
-          </a>
+          </Link>
         </div>
         <div className="footer-links">
           <a href="#how">How It Works</a>
           <a href="#services">Services</a>
         </div>
         <div className="footer-links">
-          <a href="/sign-in">For Providers</a>
+          <a href={providerHref}>For Providers</a>
           <a href="#faq">FAQ</a>
         </div>
         <div className="footer-links">

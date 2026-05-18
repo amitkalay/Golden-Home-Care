@@ -24,7 +24,7 @@ async function requireProviderUserId() {
     redirect("/sign-in");
   }
 
-  await ensureDraftProviderProfile(userId, session?.user?.name, session?.user?.image);
+  await ensureDraftProviderProfile(userId, session?.user?.name);
   return userId;
 }
 

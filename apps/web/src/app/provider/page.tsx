@@ -19,7 +19,7 @@ export default async function ProviderPage({ searchParams }: ProviderPageProps) 
     redirect("/sign-in");
   }
 
-  await ensureDraftProviderProfile(session.user.id, session.user.name, session.user.image);
+  await ensureDraftProviderProfile(session.user.id, session.user.name);
   const profile = await getProviderProfileByUserId(session.user.id);
   const params = searchParams ? await searchParams : {};
   const profileStatus = Array.isArray(params.profile) ? params.profile[0] : params.profile;
@@ -38,4 +38,3 @@ export default async function ProviderPage({ searchParams }: ProviderPageProps) 
     </ProviderShell>
   );
 }
-
