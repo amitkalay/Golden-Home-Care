@@ -189,10 +189,6 @@ export default function HomePage() {
             <FeatureCard key={service.title} {...service} />
           ))}
         </div>
-        <p className="support-note">
-          <Heart size={18} /> Golden Home Care providers offer non-medical support
-          only.
-        </p>
       </section>
 
       <section className="safety-section" id="safety">
@@ -222,27 +218,19 @@ export default function HomePage() {
             </span>
             <span>Golden Home Care</span>
           </a>
-          <p>Non-medical support for older adults and their families.</p>
         </div>
         <div className="footer-links">
           <a href="#how">How It Works</a>
           <a href="#services">Services</a>
-          <a href="#safety">Safety</a>
         </div>
         <div className="footer-links">
           <a href="/sign-in">For Providers</a>
           <a href="#faq">FAQ</a>
-          <a href="#blog">Blog</a>
         </div>
         <div className="footer-links">
           <a href="#about">About Us</a>
-          <a href="#careers">Careers</a>
-          <a href="#contact">Contact Us</a>
         </div>
         <div className="socials" aria-label="Social links">
-          <span>f</span>
-          <span>ig</span>
-          <span>in</span>
           <p>© 2026 Golden Home Care, Inc. All rights reserved.</p>
         </div>
       </footer>
