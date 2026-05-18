@@ -1,8 +1,11 @@
 import type { Adapter } from "next-auth/adapters";
 import type { NextAuthOptions } from "next-auth";
+import { getServerSession } from "next-auth";
+import { redirect } from "next/navigation";
 import NeonAdapter from "@auth/neon-adapter";
 import GoogleProvider from "next-auth/providers/google";
-import { ensureAuthTables, ensureProviderTables, getPool } from "./database";
+import { getAuthSecret } from "./auth-secret";
+import { ensureAuthTables, getPool } from "./database";
 
 function getGoogleCredentials() {
   const clientId = process.env.AUTH_GOOGLE_ID;
@@ -66,6 +69,7 @@ function createLazyNeonAdapter(): Adapter {
 
 export const authOptions: NextAuthOptions = {
   adapter: createLazyNeonAdapter(),
+  secret: getAuthSecret(),
   session: {
     strategy: "jwt",
   },
@@ -80,13 +84,14 @@ export const authOptions: NextAuthOptions = {
   callbacks: {
     async signIn({ user }) {
       if (!user.email) return false;
-      await ensureProviderTables();
+      await ensureAuthTables();
       return true;
     },
     async jwt({ token, user }) {
       if (user?.id) {
+        const role = (user as { role?: string }).role;
         token.id = user.id;
-        token.role = "provider";
+        token.role = role === "provider" ? "provider" : "user";
       }
 
       return token;
@@ -94,10 +99,24 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session.user) {
         session.user.id = token.id as string;
-        session.user.role = (token.role as string) || "provider";
+        session.user.role = token.role === "provider" ? "provider" : "user";
       }
 
       return session;
     },
   },
 };
+
+export async function getCurrentUserSession() {
+  return getServerSession(authOptions);
+}
+
+export async function requireUser() {
+  const session = await getCurrentUserSession();
+
+  if (!session?.user?.id) {
+    redirect("/sign-in");
+  }
+
+  return session.user;
+}

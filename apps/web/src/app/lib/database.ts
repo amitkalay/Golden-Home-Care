@@ -53,13 +53,18 @@ async function createAuthTables() {
       email text unique,
       "emailVerified" timestamptz,
       image text,
-      role text not null default 'provider',
-      created_at timestamptz not null default now()
+      bio text,
+      role text not null default 'user',
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
     )
   `;
 
-  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role text not null default 'provider'`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS bio text`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS role text not null default 'user'`;
   await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS created_at timestamptz not null default now()`;
+  await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at timestamptz not null default now()`;
+  await sql`ALTER TABLE users ALTER COLUMN role SET DEFAULT 'user'`;
 
   await sql`
     CREATE TABLE IF NOT EXISTS accounts (
@@ -117,6 +122,7 @@ async function createProviderTables() {
       user_id text not null unique references users(id) on delete cascade,
       display_name text,
       photo_url text,
+      contact_email text,
       phone text,
       zip_code varchar(10),
       latitude double precision,
@@ -139,6 +145,7 @@ async function createProviderTables() {
   `;
 
   await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS phone text`;
+  await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS contact_email text`;
   await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS latitude double precision`;
   await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS longitude double precision`;
   await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS languages text[] not null default '{}'`;
@@ -163,4 +170,3 @@ async function createProviderTables() {
     ON provider_services(service_type)
   `;
 }
-

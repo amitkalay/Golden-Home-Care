@@ -84,13 +84,18 @@ function toRecord(row: Record<string, unknown>): ProviderProfileRecord {
   };
 }
 
-export async function ensureDraftProviderProfile(userId: string, displayName?: string | null, photoUrl?: string | null) {
+export async function ensureDraftProviderProfile(userId: string, displayName?: string | null) {
   const sql = getSql();
 
   await ensureProviderTables();
   await sql`
-    INSERT INTO provider_profiles (user_id, display_name, photo_url, status)
-    VALUES (${userId}, ${displayName || null}, ${photoUrl || null}, 'draft')
+    UPDATE users
+    SET role = 'provider', updated_at = now()
+    WHERE id = ${userId} AND role <> 'provider'
+  `;
+  await sql`
+    INSERT INTO provider_profiles (user_id, display_name, status)
+    VALUES (${userId}, ${displayName || null}, 'draft')
     ON CONFLICT (user_id) DO NOTHING
   `;
 }
@@ -105,7 +110,7 @@ export async function getProviderProfileByUserId(userId: string) {
       p.user_id as "userId",
       p.display_name as "displayName",
       p.photo_url as "photoUrl",
-      u.email,
+      COALESCE(p.contact_email, u.email) as email,
       p.phone,
       p.zip_code as "zipCode",
       p.latitude,
@@ -140,17 +145,13 @@ export async function saveProviderProfile(userId: string, input: ProviderProfile
   const location = await geocodeZipCode(input.zipCode);
 
   await ensureProviderTables();
-  await sql`
-    UPDATE users
-    SET name = ${input.displayName}, email = ${input.email}
-    WHERE id = ${userId}
-  `;
 
   const rows = await sql`
     INSERT INTO provider_profiles (
       user_id,
       display_name,
       photo_url,
+      contact_email,
       phone,
       zip_code,
       latitude,
@@ -170,6 +171,7 @@ export async function saveProviderProfile(userId: string, input: ProviderProfile
       ${userId},
       ${input.displayName},
       ${photoUrl},
+      ${input.email},
       ${input.phone},
       ${input.zipCode},
       ${location?.latitude ?? null},
@@ -188,6 +190,7 @@ export async function saveProviderProfile(userId: string, input: ProviderProfile
     ON CONFLICT (user_id) DO UPDATE SET
       display_name = EXCLUDED.display_name,
       photo_url = COALESCE(EXCLUDED.photo_url, provider_profiles.photo_url),
+      contact_email = EXCLUDED.contact_email,
       phone = EXCLUDED.phone,
       zip_code = EXCLUDED.zip_code,
       latitude = EXCLUDED.latitude,
@@ -256,7 +259,7 @@ export async function searchProviderProfiles({
       p.user_id as "userId",
       p.display_name as "displayName",
       p.photo_url as "photoUrl",
-      u.email,
+      COALESCE(p.contact_email, u.email) as email,
       p.phone,
       p.zip_code as "zipCode",
       p.latitude,

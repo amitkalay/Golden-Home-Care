@@ -23,7 +23,9 @@ describe("homepage", () => {
     assert.match(homepage, /Find care near me/);
     assert.match(homepage, /Become a provider/);
     assert.ok(homepage.includes('href="/providers"'));
-    assert.ok(homepage.includes('href="/sign-in"'));
+    assert.ok(homepage.includes('"/sign-in?callbackUrl=/provider/onboarding"'));
+    assert.match(homepage, /Hello, \{userName\}/);
+    assert.match(homepage, /callbackUrl="\/account"/);
     assert.equal(homepage.includes('href="#start"'), false);
     assert.equal(homepage.includes("Get started with Golden Home Care"), false);
     assert.equal(homepage.includes("SURVEY_ACKNOWLEDGEMENT"), false);

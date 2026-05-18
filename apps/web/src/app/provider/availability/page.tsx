@@ -19,7 +19,7 @@ export default async function ProviderAvailabilityPage({ searchParams }: Availab
     redirect("/sign-in");
   }
 
-  await ensureDraftProviderProfile(session.user.id, session.user.name, session.user.image);
+  await ensureDraftProviderProfile(session.user.id, session.user.name);
   const profile = await getProviderProfileByUserId(session.user.id);
   const params = searchParams ? await searchParams : {};
   const status = Array.isArray(params.status) ? params.status[0] : params.status;
@@ -33,4 +33,3 @@ export default async function ProviderAvailabilityPage({ searchParams }: Availab
     </ProviderShell>
   );
 }
-

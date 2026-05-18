@@ -43,7 +43,7 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
         </Link>
         <nav className="provider-nav" aria-label="Primary navigation">
           <Link href="/">Home</Link>
-          <Link href="/sign-in">Provider sign in</Link>
+          <Link href="/sign-in?callbackUrl=/provider/onboarding">Provider sign in</Link>
         </nav>
       </header>
       <section className="provider-page-heading">
