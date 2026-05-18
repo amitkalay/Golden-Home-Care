@@ -12,10 +12,6 @@ describe("homepage", () => {
       new URL("../src/app/provider/services.js", import.meta.url),
       "utf8",
     );
-    const familyValidation = await readFile(
-      new URL("../src/app/family-leads/validation.js", import.meta.url),
-      "utf8",
-    );
     const tagline =
       "Concierge senior center platform bringing premium services and entertainment to you.";
 
@@ -24,43 +20,36 @@ describe("homepage", () => {
     assert.equal(homepage.includes("Trusted support for aging parents at home"), false);
     assert.ok(homepage.includes('src="/hero-concierge-services.png"'));
     assert.ok(homepage.includes('alt="Older adults enjoying piano instruction and supportive help at home"'));
-    assert.match(homepage, /Name/);
-    assert.match(homepage, /Email/);
-    assert.match(homepage, /Phone/);
-    assert.match(homepage, /ZIP code/);
-    assert.match(homepage, /Relationship to older adult/);
-    assert.match(homepage, /Help needed/);
-    assert.match(homepage, /Other help needed/);
-    assert.match(homepage, /Something else/);
-    assert.match(homepage, /How often\?/);
-    assert.match(homepage, /When do you need help\?/);
-    assert.match(homepage, /Additional notes or feedback/);
     assert.match(homepage, /Find care near me/);
-    const acknowledgement =
-      "We appreciate your help! Your survey responses will directly guide how we build this platform to ensure it meets your needs. We’ll be in touch with next steps as we develop this service.";
-
-    assert.equal(homepage.split(acknowledgement).length - 1, 1);
     assert.match(homepage, /Become a provider/);
+    assert.ok(homepage.includes('href="/providers"'));
     assert.ok(homepage.includes('href="/sign-in"'));
-    assert.match(homepage, /ZIP code \/ service area/);
-    assert.match(homepage, /Hourly rate/);
-    assert.match(homepage, /Services you can offer/);
+    assert.equal(homepage.includes('href="#start"'), false);
+    assert.equal(homepage.includes("Get started with Golden Home Care"), false);
+    assert.equal(homepage.includes("SURVEY_ACKNOWLEDGEMENT"), false);
+    assert.equal(homepage.includes("Relationship to older adult"), false);
+    assert.equal(homepage.includes("Help needed"), false);
+    assert.equal(homepage.includes("Other help needed"), false);
+    assert.equal(homepage.includes("How often?"), false);
+    assert.equal(homepage.includes("When do you need help?"), false);
+    assert.equal(homepage.includes("Additional notes or feedback"), false);
+    assert.equal(homepage.includes("ZIP code / service area"), false);
+    assert.equal(homepage.includes("Hourly rate"), false);
+    assert.equal(homepage.includes("Services you can offer"), false);
+    assert.equal(homepage.includes("Senior-care experience"), false);
+    assert.equal(homepage.includes("Willing to complete background check?"), false);
+    assert.equal(homepage.includes("Apply to join"), false);
+    assert.match(homepage, /How Golden Home Care works/);
+    assert.match(homepage, /Tell us what your loved one needs/);
+    assert.match(homepage, /Browse trusted providers and rates/);
+    assert.match(homepage, /Book recurring visits and receive updates/);
+    assert.match(homepage, /Simple support for independent living/);
+    assert.match(homepage, /Built on trust and safety/);
+    assert.match(homepage, /Help your parent stay independent with trusted support nearby/);
     assert.equal(providerServices.includes("Gardening"), false);
     assert.equal(providerServices.includes("Arts & Crafts"), false);
     for (const label of ["Meal Prep", "Companionship", "Errands", "Walks", "Pickleball Lessons", "Music Lessons"]) {
       assert.ok(providerServices.includes(label));
     }
-    for (const label of ["Walks", "Pickleball Lessons", "Music Lessons"]) {
-      assert.ok(familyValidation.includes(label));
-    }
-    assert.equal(familyValidation.includes("Arts & Crafts"), false);
-    assert.match(homepage, /Senior-care experience/);
-    assert.match(homepage, /Availability/);
-    assert.match(homepage, /Willing to complete background check\?/);
-    assert.match(homepage, /Notes/);
-    assert.match(homepage, /Apply to join/);
-    assert.equal(homepage.split("{SURVEY_ACKNOWLEDGEMENT}").length - 1, 2);
-    assert.match(homepage, /type="number"/);
-    assert.match(homepage, /step="1"/);
   });
 });
