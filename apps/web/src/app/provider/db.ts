@@ -1,7 +1,14 @@
 import { getSql, ensureProviderTables } from "../lib/database";
 import { geocodeZipCode } from "../lib/zip-geocode";
 import { filterProviderSearchResults } from "../providers/search.js";
+import { defaultAvailabilityTimezone, generateAvailabilitySummary } from "./profile-validation.js";
 import { providerServiceLabels, providerServiceValues } from "./services.js";
+
+export type ProviderAvailabilityWindowRecord = {
+  dayOfWeek: number;
+  startTime: string;
+  endTime: string;
+};
 
 export type ProviderProfileRecord = {
   id: number;
@@ -19,6 +26,10 @@ export type ProviderProfileRecord = {
   experienceSummary: string | null;
   languages: string[];
   availabilitySummary: string | null;
+  availabilityTimezone: string;
+  onDemandAvailable: boolean;
+  minimumNoticeMinutes: number;
+  availabilityWindows: ProviderAvailabilityWindowRecord[];
   transportationAvailable: boolean;
   backgroundCheckWilling: boolean;
   status: string;
@@ -35,20 +46,47 @@ type ProviderProfileInput = {
   bio: string;
   experienceSummary: string;
   languages: string[];
-  availabilitySummary: string;
   transportationAvailable: boolean;
   backgroundCheckWilling: boolean;
   servicesOffered: string[];
 };
 
 type ProviderAvailabilityInput = {
+  windows: ProviderAvailabilityWindowRecord[];
   availabilitySummary: string;
-  transportationAvailable: boolean;
-  backgroundCheckWilling: boolean;
+  availabilityTimezone: string;
+  onDemandAvailable: boolean;
+  minimumNoticeMinutes: number;
 };
 
 function toRecord(row: Record<string, unknown>): ProviderProfileRecord {
   const services = Array.isArray(row.services) ? row.services : [];
+  const availabilityWindows = Array.isArray(row.availabilityWindows) ? row.availabilityWindows : [];
+  const normalizedAvailabilityWindows = availabilityWindows
+    .filter((window): window is ProviderAvailabilityWindowRecord => {
+      return (
+        typeof window === "object" &&
+        window !== null &&
+        Number.isInteger(Number((window as { dayOfWeek?: unknown }).dayOfWeek)) &&
+        typeof (window as { startTime?: unknown }).startTime === "string" &&
+        typeof (window as { endTime?: unknown }).endTime === "string"
+      );
+    })
+    .map((window) => ({
+      dayOfWeek: Number(window.dayOfWeek),
+      startTime: window.startTime,
+      endTime: window.endTime,
+    }));
+  const availabilityTimezone = (row.availabilityTimezone as string | null) ?? defaultAvailabilityTimezone;
+  const minimumNoticeMinutes = row.minimumNoticeMinutes === null ? 120 : Number(row.minimumNoticeMinutes);
+  const generatedAvailabilitySummary = generateAvailabilitySummary({
+    windows: normalizedAvailabilityWindows,
+    timezone: availabilityTimezone,
+    onDemandAvailable: Boolean(row.onDemandAvailable),
+    minimumNoticeMinutes,
+  });
+  const availabilitySummary =
+    (row.availabilitySummary as string | null) ?? (generatedAvailabilitySummary || null);
 
   return {
     id: Number(row.id),
@@ -65,7 +103,11 @@ function toRecord(row: Record<string, unknown>): ProviderProfileRecord {
     bio: (row.bio as string | null) ?? null,
     experienceSummary: (row.experienceSummary as string | null) ?? null,
     languages: Array.isArray(row.languages) ? (row.languages as string[]) : [],
-    availabilitySummary: (row.availabilitySummary as string | null) ?? null,
+    availabilitySummary,
+    availabilityTimezone,
+    onDemandAvailable: Boolean(row.onDemandAvailable),
+    minimumNoticeMinutes,
+    availabilityWindows: normalizedAvailabilityWindows,
     transportationAvailable: Boolean(row.transportationAvailable),
     backgroundCheckWilling: Boolean(row.backgroundCheckWilling),
     status: String(row.status),
@@ -121,19 +163,38 @@ export async function getProviderProfileByUserId(userId: string) {
       p.experience_summary as "experienceSummary",
       p.languages,
       p.availability_summary as "availabilitySummary",
+      p.availability_timezone as "availabilityTimezone",
+      p.on_demand_available as "onDemandAvailable",
+      p.minimum_notice_minutes as "minimumNoticeMinutes",
       p.transportation_available as "transportationAvailable",
       p.background_check_willing as "backgroundCheckWilling",
       p.status,
       COALESCE(
-        json_agg(json_build_object('serviceType', ps.service_type))
-          FILTER (WHERE ps.id IS NOT NULL),
+        (
+          SELECT json_agg(json_build_object('serviceType', ps.service_type) ORDER BY ps.service_type)
+          FROM provider_services ps
+          WHERE ps.provider_profile_id = p.id
+        ),
         '[]'
-      ) as services
+      ) as services,
+      COALESCE(
+        (
+          SELECT json_agg(
+            json_build_object(
+              'dayOfWeek', paw.day_of_week,
+              'startTime', to_char(paw.start_time, 'HH24:MI'),
+              'endTime', to_char(paw.end_time, 'HH24:MI')
+            )
+            ORDER BY paw.day_of_week, paw.start_time
+          )
+          FROM provider_availability_windows paw
+          WHERE paw.provider_profile_id = p.id
+        ),
+        '[]'
+      ) as "availabilityWindows"
     FROM provider_profiles p
     JOIN users u ON u.id = p.user_id
-    LEFT JOIN provider_services ps ON ps.provider_profile_id = p.id
     WHERE p.user_id = ${userId}
-    GROUP BY p.id, u.email
   `;
 
   const records = rows as Array<Record<string, unknown>>;
@@ -161,7 +222,6 @@ export async function saveProviderProfile(userId: string, input: ProviderProfile
       bio,
       experience_summary,
       languages,
-      availability_summary,
       transportation_available,
       background_check_willing,
       status,
@@ -181,7 +241,6 @@ export async function saveProviderProfile(userId: string, input: ProviderProfile
       ${input.bio},
       ${input.experienceSummary},
       ${input.languages},
-      ${input.availabilitySummary},
       ${input.transportationAvailable},
       ${input.backgroundCheckWilling},
       'active',
@@ -200,7 +259,6 @@ export async function saveProviderProfile(userId: string, input: ProviderProfile
       bio = EXCLUDED.bio,
       experience_summary = EXCLUDED.experience_summary,
       languages = EXCLUDED.languages,
-      availability_summary = EXCLUDED.availability_summary,
       transportation_available = EXCLUDED.transportation_available,
       background_check_willing = EXCLUDED.background_check_willing,
       status = 'active',
@@ -225,15 +283,35 @@ export async function saveProviderAvailability(userId: string, input: ProviderAv
   const sql = getSql();
 
   await ensureProviderTables();
-  await sql`
+  const rows = await sql`
     UPDATE provider_profiles
     SET
       availability_summary = ${input.availabilitySummary},
-      transportation_available = ${input.transportationAvailable},
-      background_check_willing = ${input.backgroundCheckWilling},
+      availability_timezone = ${input.availabilityTimezone},
+      on_demand_available = ${input.onDemandAvailable},
+      minimum_notice_minutes = ${input.minimumNoticeMinutes},
       updated_at = now()
     WHERE user_id = ${userId}
+    RETURNING id
   `;
+
+  const records = rows as Array<Record<string, unknown>>;
+  const profileId = records[0] ? Number(records[0].id) : null;
+
+  if (!profileId) return;
+
+  await sql`DELETE FROM provider_availability_windows WHERE provider_profile_id = ${profileId}`;
+
+  for (const window of input.windows) {
+    await sql`
+      INSERT INTO provider_availability_windows (provider_profile_id, day_of_week, start_time, end_time)
+      VALUES (${profileId}, ${window.dayOfWeek}, ${window.startTime}, ${window.endTime})
+      ON CONFLICT (provider_profile_id, day_of_week) DO UPDATE SET
+        start_time = EXCLUDED.start_time,
+        end_time = EXCLUDED.end_time,
+        updated_at = now()
+    `;
+  }
 }
 
 export async function searchProviderProfiles({
@@ -270,19 +348,38 @@ export async function searchProviderProfiles({
       p.experience_summary as "experienceSummary",
       p.languages,
       p.availability_summary as "availabilitySummary",
+      p.availability_timezone as "availabilityTimezone",
+      p.on_demand_available as "onDemandAvailable",
+      p.minimum_notice_minutes as "minimumNoticeMinutes",
       p.transportation_available as "transportationAvailable",
       p.background_check_willing as "backgroundCheckWilling",
       p.status,
       COALESCE(
-        json_agg(json_build_object('serviceType', ps.service_type))
-          FILTER (WHERE ps.id IS NOT NULL),
+        (
+          SELECT json_agg(json_build_object('serviceType', ps.service_type) ORDER BY ps.service_type)
+          FROM provider_services ps
+          WHERE ps.provider_profile_id = p.id
+        ),
         '[]'
-      ) as services
+      ) as services,
+      COALESCE(
+        (
+          SELECT json_agg(
+            json_build_object(
+              'dayOfWeek', paw.day_of_week,
+              'startTime', to_char(paw.start_time, 'HH24:MI'),
+              'endTime', to_char(paw.end_time, 'HH24:MI')
+            )
+            ORDER BY paw.day_of_week, paw.start_time
+          )
+          FROM provider_availability_windows paw
+          WHERE paw.provider_profile_id = p.id
+        ),
+        '[]'
+      ) as "availabilityWindows"
     FROM provider_profiles p
     JOIN users u ON u.id = p.user_id
-    LEFT JOIN provider_services ps ON ps.provider_profile_id = p.id
     WHERE p.status = 'active'
-    GROUP BY p.id, u.email
     ORDER BY p.updated_at DESC
   `;
 

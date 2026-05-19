@@ -202,6 +202,63 @@
   object-fit: cover;
 }
 
+.availability-legacy-note {
+  margin: 0;
+  padding: 11px 12px;
+  border: 1px solid #d7e5d8;
+  border-radius: 5px;
+  background: #f4faf3;
+  color: var(--deep-2);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.availability-schedule {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.availability-schedule legend {
+  margin-bottom: 1px;
+  color: #1f2824;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.availability-day-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(120px, 0.62fr) minmax(120px, 0.62fr);
+  align-items: end;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid #ddd9d2;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.availability-day-row label {
+  min-width: 0;
+}
+
+.availability-day-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  color: #343f39;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.availability-day-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--deep);
+}
+
 .account-profile-form,
 .account-danger-zone,
 .account-delete-card {
@@ -463,6 +520,7 @@
   .provider-profile-form,
   .provider-search-form,
   .provider-profile-facts,
+  .availability-day-row,
   .public-provider-card {
     grid-template-columns: 1fr;
   }
