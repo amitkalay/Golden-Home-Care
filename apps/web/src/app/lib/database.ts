@@ -133,6 +133,9 @@ async function createProviderTables() {
       experience_summary text,
       languages text[] not null default '{}',
       availability_summary text,
+      availability_timezone text not null default 'America/Los_Angeles',
+      on_demand_available boolean not null default false,
+      minimum_notice_minutes integer not null default 120,
       transportation_available boolean not null default false,
       background_check_willing boolean not null default false,
       status text not null default 'draft',
@@ -149,6 +152,9 @@ async function createProviderTables() {
   await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS latitude double precision`;
   await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS longitude double precision`;
   await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS languages text[] not null default '{}'`;
+  await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS availability_timezone text not null default 'America/Los_Angeles'`;
+  await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS on_demand_available boolean not null default false`;
+  await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS minimum_notice_minutes integer not null default 120`;
   await sql`ALTER TABLE provider_profiles ADD COLUMN IF NOT EXISTS updated_at timestamptz not null default now()`;
 
   await sql`
@@ -161,6 +167,21 @@ async function createProviderTables() {
   `;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS provider_availability_windows (
+      id bigint generated always as identity primary key,
+      provider_profile_id bigint not null references provider_profiles(id) on delete cascade,
+      day_of_week integer not null,
+      start_time time not null,
+      end_time time not null,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      unique(provider_profile_id, day_of_week),
+      constraint provider_availability_windows_day_check check (day_of_week between 0 and 6),
+      constraint provider_availability_windows_time_check check (start_time < end_time)
+    )
+  `;
+
+  await sql`
     CREATE INDEX IF NOT EXISTS provider_profiles_status_idx
     ON provider_profiles(status)
   `;
@@ -168,5 +189,10 @@ async function createProviderTables() {
   await sql`
     CREATE INDEX IF NOT EXISTS provider_services_service_type_idx
     ON provider_services(service_type)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS provider_availability_windows_profile_idx
+    ON provider_availability_windows(provider_profile_id)
   `;
 }

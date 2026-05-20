@@ -27,7 +27,7 @@ export default async function ProviderAvailabilityPage({ searchParams }: Availab
   return (
     <ProviderShell
       title="Availability"
-      copy="Keep a simple summary of when families can request your support."
+      copy="Set recurring weekly windows so families know when they can request your support."
     >
       <ProviderAvailabilityForm profile={profile} status={status} />
     </ProviderShell>

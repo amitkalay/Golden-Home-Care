@@ -5,6 +5,12 @@ import { providerServiceOptions } from "./services.js";
 import type { ProviderProfileRecord } from "./db";
 import { SignOutButton } from "../sign-out-button";
 import {
+  availabilityDayOptions,
+  availabilityTimezoneOptions,
+  defaultAvailabilityTimezone,
+  minimumNoticeOptions,
+} from "./profile-validation.js";
+import {
   saveProviderAvailability,
   saveProviderOnboarding,
   saveProviderProfile,
@@ -48,7 +54,7 @@ export function ProviderStatusMessage({ status }: { status?: string }) {
   if (status === "invalid") {
     return (
       <p className="form-alert error full" role="alert">
-        Please complete the required fields and select at least one service.
+        Please complete the required fields and check the highlighted choices.
       </p>
     );
   }
@@ -64,7 +70,7 @@ export function ProviderStatusMessage({ status }: { status?: string }) {
   if (status === "saved") {
     return (
       <p className="form-alert success full" role="status">
-        Your provider profile has been saved.
+        Your changes have been saved.
       </p>
     );
   }
@@ -212,16 +218,6 @@ export function ProviderProfileForm({
           required
         />
       </label>
-      <label className="full">
-        Availability summary
-        <textarea
-          name="availabilitySummary"
-          placeholder="Example: Weekday mornings and Sunday afternoons."
-          rows={3}
-          defaultValue={profile?.availabilitySummary ?? ""}
-          required
-        />
-      </label>
       <fieldset className="checkbox-group full">
         <legend>Provider details</legend>
         <label>
@@ -257,38 +253,87 @@ export function ProviderAvailabilityForm({
   profile: ProviderProfileRecord | null;
   status?: string;
 }) {
+  const windowsByDay = new Map(
+    profile?.availabilityWindows.map((window) => [window.dayOfWeek, window]) ?? [],
+  );
+  const timezone = profile?.availabilityTimezone ?? defaultAvailabilityTimezone;
+  const minimumNoticeMinutes = profile?.minimumNoticeMinutes ?? 120;
+  const hasStructuredAvailability = Boolean(profile?.availabilityWindows.length);
+
   return (
     <form className="form-card provider-profile-form" action={saveProviderAvailability}>
       <ProviderStatusMessage status={status} />
-      <label className="full">
-        Availability summary
-        <textarea
-          name="availabilitySummary"
-          placeholder="Example: Weekday mornings and Sunday afternoons."
-          rows={5}
-          defaultValue={profile?.availabilitySummary ?? ""}
-          required
-        />
+      {!hasStructuredAvailability && profile?.availabilitySummary ? (
+        <p className="availability-legacy-note full">
+          Current availability note: {profile.availabilitySummary}
+        </p>
+      ) : null}
+      <fieldset className="availability-schedule full">
+        <legend>Weekly availability</legend>
+        {availabilityDayOptions.map((day) => {
+          const window = windowsByDay.get(day.value);
+
+          return (
+            <div className="availability-day-row" key={day.value}>
+              <label className="availability-day-toggle">
+                <input
+                  name="availableDays"
+                  type="checkbox"
+                  value={day.value}
+                  defaultChecked={Boolean(window)}
+                />
+                <span>{day.label}</span>
+              </label>
+              <label>
+                <span>Start</span>
+                <input
+                  name={`startTime-${day.value}`}
+                  type="time"
+                  defaultValue={window?.startTime ?? "09:00"}
+                />
+              </label>
+              <label>
+                <span>End</span>
+                <input
+                  name={`endTime-${day.value}`}
+                  type="time"
+                  defaultValue={window?.endTime ?? "12:00"}
+                />
+              </label>
+            </div>
+          );
+        })}
+      </fieldset>
+      <label>
+        Timezone
+        <select name="availabilityTimezone" defaultValue={timezone}>
+          {availabilityTimezoneOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Minimum notice
+        <select name="minimumNoticeMinutes" defaultValue={minimumNoticeMinutes}>
+          {minimumNoticeOptions.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
       </label>
       <fieldset className="checkbox-group full">
-        <legend>Availability details</legend>
+        <legend>On-demand requests</legend>
         <label>
           <input
-            name="transportationAvailable"
+            name="onDemandAvailable"
             type="checkbox"
             value="yes"
-            defaultChecked={profile?.transportationAvailable ?? false}
+            defaultChecked={profile?.onDemandAvailable ?? false}
           />
-          <span>Transportation available</span>
-        </label>
-        <label>
-          <input
-            name="backgroundCheckWilling"
-            type="checkbox"
-            value="yes"
-            defaultChecked={profile?.backgroundCheckWilling ?? false}
-          />
-          <span>Willing to complete background check</span>
+          <span>Accept on-demand requests during available windows</span>
         </label>
       </fieldset>
       <button className="button button-primary form-button full" type="submit">
@@ -301,6 +346,7 @@ export function ProviderAvailabilityForm({
 export function ProviderDashboardCards({ profile }: { profile: ProviderProfileRecord | null }) {
   const isActive = profile?.status === "active";
   const publicSearchHref = profile?.zipCode ? `/providers?zip=${profile.zipCode}` : "/providers";
+  const hasAvailability = Boolean(profile?.availabilityWindows.length || profile?.availabilitySummary);
 
   return (
     <div className="provider-dashboard-grid">
@@ -319,8 +365,8 @@ export function ProviderDashboardCards({ profile }: { profile: ProviderProfileRe
       <article className="provider-summary-card">
         <CalendarCheck2 size={26} />
         <span>Availability</span>
-        <strong>{profile?.availabilitySummary ? "Set" : "Missing"}</strong>
-        <p>{profile?.availabilitySummary || "Add a short availability summary."}</p>
+        <strong>{hasAvailability ? "Set" : "Missing"}</strong>
+        <p>{profile?.availabilitySummary || "Add weekly availability windows."}</p>
       </article>
       <article className="provider-summary-card">
         <Search size={26} />
