@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BadgeCheck, Car, Languages, MapPin, Search } from "lucide-react";
+import { BadgeCheck, CalendarClock, Car, Languages, MapPin, Search } from "lucide-react";
 import { providerServiceOptions } from "../provider/services.js";
 import { searchProviderProfiles } from "../provider/db";
 
@@ -16,6 +16,27 @@ type ProvidersPageProps = {
 function formatRate(rateCents: number | null) {
   if (!rateCents) return "Rate pending";
   return `$${Math.round(rateCents / 100)}/hr`;
+}
+
+function buildRequestHref({
+  providerId,
+  service,
+  zip,
+  matchPreference = "any",
+}: {
+  providerId?: number;
+  service?: string;
+  zip?: string | null;
+  matchPreference?: "any" | "specific";
+}) {
+  const params = new URLSearchParams();
+
+  params.set("matchPreference", matchPreference);
+  if (providerId) params.set("providerId", String(providerId));
+  if (service) params.set("service", service);
+  if (zip) params.set("zip", zip);
+
+  return `/requests/new?${params.toString()}`;
 }
 
 export default async function ProvidersPage({ searchParams }: ProvidersPageProps) {
@@ -71,6 +92,19 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
           Search
         </button>
       </form>
+      <section className="provider-request-cta">
+        <div>
+          <h2>Need help from whoever is available?</h2>
+          <p>Submit one request with your service, ZIP code, timing, and contact details.</p>
+        </div>
+        <Link
+          className="button button-primary"
+          href={buildRequestHref({ service, zip, matchPreference: "any" })}
+        >
+          <CalendarClock size={18} />
+          Request service
+        </Link>
+      </section>
       {invalidZip ? (
         <p className="form-alert error" role="alert">
           Enter a valid 5-digit US ZIP code to search by coverage area.
@@ -83,65 +117,84 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
       ) : null}
       <section className="provider-results" aria-label="Provider profiles">
         {providers.length ? (
-          providers.map((provider) => (
-            <article className="public-provider-card" key={provider.id}>
-              <div className="public-provider-photo">
-                {provider.photoUrl ? (
-                  <Image src={provider.photoUrl} alt="" fill sizes="120px" />
-                ) : (
-                  <span>{provider.displayName?.slice(0, 1) ?? "G"}</span>
-                )}
-              </div>
-              <div className="public-provider-main">
-                <div className="public-provider-heading">
-                  <div>
-                    <h2>{provider.displayName}</h2>
-                    <p>
-                      <MapPin size={16} /> ZIP {provider.zipCode} · {provider.serviceRadiusMiles} mile radius
-                    </p>
-                  </div>
-                  <strong>{formatRate(provider.hourlyRateCents)}</strong>
+          providers.map((provider) => {
+            const selectedService =
+              service && provider.services.some((item) => item.serviceType === service)
+                ? service
+                : provider.services[0]?.serviceType;
+            const requestHref = buildRequestHref({
+              providerId: provider.id,
+              service: selectedService,
+              zip: zip ?? provider.zipCode,
+              matchPreference: "specific",
+            });
+
+            return (
+              <article className="public-provider-card" key={provider.id}>
+                <div className="public-provider-photo">
+                  {provider.photoUrl ? (
+                    <Image src={provider.photoUrl} alt="" fill sizes="120px" />
+                  ) : (
+                    <span>{provider.displayName?.slice(0, 1) ?? "G"}</span>
+                  )}
                 </div>
-                <p>{provider.bio}</p>
-                <div className="provider-chip-row">
-                  {provider.services.map((item) => (
-                    <span key={item.serviceType}>{item.label}</span>
-                  ))}
+                <div className="public-provider-main">
+                  <div className="public-provider-heading">
+                    <div>
+                      <h2>{provider.displayName}</h2>
+                      <p>
+                        <MapPin size={16} /> ZIP {provider.zipCode} · {provider.serviceRadiusMiles} mile radius
+                      </p>
+                    </div>
+                    <strong>{formatRate(provider.hourlyRateCents)}</strong>
+                  </div>
+                  <p>{provider.bio}</p>
+                  <div className="provider-chip-row">
+                    {provider.services.map((item) => (
+                      <span key={item.serviceType}>{item.label}</span>
+                    ))}
+                  </div>
+                  <dl className="provider-profile-facts">
+                    <div>
+                      <dt>
+                        <Languages size={16} /> Languages
+                      </dt>
+                      <dd>{provider.languages.join(", ")}</dd>
+                    </div>
+                    <div>
+                      <dt>
+                        <BadgeCheck size={16} /> Experience
+                      </dt>
+                      <dd>{provider.experienceSummary}</dd>
+                    </div>
+                    <div>
+                      <dt>
+                        <Search size={16} /> Availability
+                      </dt>
+                      <dd>{provider.availabilitySummary}</dd>
+                    </div>
+                    <div>
+                      <dt>
+                        <Car size={16} /> Transportation
+                      </dt>
+                      <dd>{provider.transportationAvailable ? "Available" : "Not listed"}</dd>
+                    </div>
+                  </dl>
+                  <p className="background-check-note">
+                    {provider.backgroundCheckWilling
+                      ? "Willing to complete a background check."
+                      : "Background-check willingness not listed."}
+                  </p>
+                  <div className="public-provider-actions">
+                    <Link className="button button-secondary" href={requestHref}>
+                      <CalendarClock size={18} />
+                      Request service
+                    </Link>
+                  </div>
                 </div>
-                <dl className="provider-profile-facts">
-                  <div>
-                    <dt>
-                      <Languages size={16} /> Languages
-                    </dt>
-                    <dd>{provider.languages.join(", ")}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <BadgeCheck size={16} /> Experience
-                    </dt>
-                    <dd>{provider.experienceSummary}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <Search size={16} /> Availability
-                    </dt>
-                    <dd>{provider.availabilitySummary}</dd>
-                  </div>
-                  <div>
-                    <dt>
-                      <Car size={16} /> Transportation
-                    </dt>
-                    <dd>{provider.transportationAvailable ? "Available" : "Not listed"}</dd>
-                  </div>
-                </dl>
-                <p className="background-check-note">
-                  {provider.backgroundCheckWilling
-                    ? "Willing to complete a background check."
-                    : "Background-check willingness not listed."}
-                </p>
-              </div>
-            </article>
-          ))
+              </article>
+            );
+          })
         ) : (
           <section className="provider-empty-state">
             <h2>No active providers found</h2>
