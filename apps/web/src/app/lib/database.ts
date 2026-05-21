@@ -249,15 +249,33 @@ async function createServiceRequestTables() {
       status text not null default 'pending',
       match_source text not null,
       distance_miles double precision,
+      proposed_date date,
+      proposed_start_time time,
+      proposed_end_time time,
+      provider_response_note text,
+      responded_at timestamptz,
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now(),
       unique(service_request_id, provider_profile_id),
       constraint request_provider_matches_status_check check (
-        status in ('pending', 'accepted', 'declined', 'expired')
+        status in ('pending', 'proposed', 'accepted', 'declined', 'expired')
       ),
       constraint request_provider_matches_source_check check (
         match_source in ('weekly', 'on_demand')
       )
+    )
+  `;
+
+  await sql`ALTER TABLE request_provider_matches ADD COLUMN IF NOT EXISTS proposed_date date`;
+  await sql`ALTER TABLE request_provider_matches ADD COLUMN IF NOT EXISTS proposed_start_time time`;
+  await sql`ALTER TABLE request_provider_matches ADD COLUMN IF NOT EXISTS proposed_end_time time`;
+  await sql`ALTER TABLE request_provider_matches ADD COLUMN IF NOT EXISTS provider_response_note text`;
+  await sql`ALTER TABLE request_provider_matches ADD COLUMN IF NOT EXISTS responded_at timestamptz`;
+  await sql`ALTER TABLE request_provider_matches DROP CONSTRAINT IF EXISTS request_provider_matches_status_check`;
+  await sql`
+    ALTER TABLE request_provider_matches
+    ADD CONSTRAINT request_provider_matches_status_check check (
+      status in ('pending', 'proposed', 'accepted', 'declined', 'expired')
     )
   `;
 

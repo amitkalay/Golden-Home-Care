@@ -11,7 +11,14 @@ import {
   validateProviderPhoto,
 } from "./profile-validation.js";
 import {
+  parseProviderMatchId,
+  parseProviderRequestProposalForm,
+} from "./request-validation.js";
+import {
+  acceptProviderRequestMatch as acceptProviderRequestMatchRecord,
+  declineProviderRequestMatch as declineProviderRequestMatchRecord,
   ensureDraftProviderProfile,
+  proposeProviderRequestTime as proposeProviderRequestTimeRecord,
   saveProviderAvailability as saveProviderAvailabilityRecord,
   saveProviderProfile as saveProviderProfileRecord,
 } from "./db";
@@ -99,4 +106,81 @@ export async function saveProviderAvailability(formData: FormData) {
   revalidatePath("/provider/availability");
   revalidatePath("/providers");
   redirect("/provider/availability?status=saved");
+}
+
+export async function acceptProviderRequestMatch(formData: FormData) {
+  const userId = await requireProviderUserId();
+  const matchId = parseProviderMatchId(formData);
+
+  if (!matchId) {
+    redirect("/provider/messages?status=invalid");
+  }
+
+  let updated = false;
+  try {
+    updated = await acceptProviderRequestMatchRecord(userId, matchId);
+  } catch (error) {
+    console.error("Failed to accept provider request match", error);
+    redirect("/provider/messages?status=error");
+  }
+
+  if (!updated) {
+    redirect("/provider/messages?status=invalid");
+  }
+
+  revalidatePath("/provider/messages");
+  redirect("/provider/messages?status=accepted&tab=accepted");
+}
+
+export async function declineProviderRequestMatch(formData: FormData) {
+  const userId = await requireProviderUserId();
+  const matchId = parseProviderMatchId(formData);
+
+  if (!matchId) {
+    redirect("/provider/messages?status=invalid");
+  }
+
+  let updated = false;
+  try {
+    updated = await declineProviderRequestMatchRecord(userId, matchId);
+  } catch (error) {
+    console.error("Failed to decline provider request match", error);
+    redirect("/provider/messages?status=error");
+  }
+
+  if (!updated) {
+    redirect("/provider/messages?status=invalid");
+  }
+
+  revalidatePath("/provider/messages");
+  redirect("/provider/messages?status=declined&tab=closed");
+}
+
+export async function proposeProviderRequestTime(formData: FormData) {
+  const userId = await requireProviderUserId();
+  const result = parseProviderRequestProposalForm(formData);
+
+  if (!result.ok || !result.data.matchId) {
+    redirect("/provider/messages?status=invalid");
+  }
+
+  let updated = false;
+  try {
+    updated = await proposeProviderRequestTimeRecord(userId, result.data.matchId, {
+      proposedDate: result.data.proposedDate,
+      proposedStartTime: result.data.proposedStartTime,
+      proposedEndTime: result.data.proposedEndTime,
+      providerResponseNote: result.data.providerResponseNote,
+    });
+  } catch (error) {
+    console.error("Failed to propose provider request time", error);
+    redirect("/provider/messages?status=error");
+  }
+
+  if (!updated) {
+    redirect("/provider/messages?status=invalid");
+  }
+
+  revalidatePath("/provider/messages");
+  redirect("/provider/messages?status=proposed&tab=proposed");
 }

@@ -51,6 +51,14 @@ function formatDistance(distanceMiles: number | null) {
   return `${distance} mi`;
 }
 
+function formatMatchStatus(status: string) {
+  if (status === "proposed") return "Proposed another time";
+  if (status === "accepted") return "Accepted";
+  if (status === "declined") return "Declined";
+  if (status === "expired") return "Closed";
+  return "Pending response";
+}
+
 export default async function RequestConfirmationPage({ params }: RequestConfirmationPageProps) {
   const user = await requireUser();
   const resolvedParams = params ? await params : {};
@@ -143,8 +151,19 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
                     <strong>{match.providerDisplayName || `Provider #${match.providerProfileId}`}</strong>
                     <span>
                       {formatRate(match.hourlyRateCents)} · {formatDistance(match.distanceMiles)} ·{" "}
-                      {match.matchSource === "on_demand" ? "On-demand" : "Weekly availability"}
+                      {match.matchSource === "on_demand" ? "On-demand" : "Weekly availability"} ·{" "}
+                      {formatMatchStatus(match.status)}
                     </span>
+                    {match.status === "proposed" &&
+                    match.proposedDate &&
+                    match.proposedStartTime &&
+                    match.proposedEndTime ? (
+                      <span>
+                        Proposed: {formatDate(match.proposedDate)} from{" "}
+                        {formatTime(match.proposedStartTime)} to {formatTime(match.proposedEndTime)}
+                      </span>
+                    ) : null}
+                    {match.providerResponseNote ? <span>{match.providerResponseNote}</span> : null}
                   </li>
                 ))}
               </ul>

@@ -37,9 +37,13 @@ export type RequestProviderMatchRecord = {
   providerProfileId: number;
   providerDisplayName: string | null;
   hourlyRateCents: number | null;
-  status: "pending" | "accepted" | "declined" | "expired";
+  status: "pending" | "proposed" | "accepted" | "declined" | "expired";
   matchSource: "weekly" | "on_demand";
   distanceMiles: number | null;
+  proposedDate: string | null;
+  proposedStartTime: string | null;
+  proposedEndTime: string | null;
+  providerResponseNote: string | null;
 };
 
 type ServiceRequestInput = {
@@ -143,7 +147,10 @@ function toRequestMatchCandidate(row: Record<string, unknown>): RequestMatchCand
 
 function toRequestProviderMatchRecord(row: Record<string, unknown>): RequestProviderMatchRecord {
   const status =
-    row.status === "accepted" || row.status === "declined" || row.status === "expired"
+    row.status === "proposed" ||
+    row.status === "accepted" ||
+    row.status === "declined" ||
+    row.status === "expired"
       ? row.status
       : "pending";
   const matchSource = row.matchSource === "on_demand" ? "on_demand" : "weekly";
@@ -156,6 +163,10 @@ function toRequestProviderMatchRecord(row: Record<string, unknown>): RequestProv
     status,
     matchSource,
     distanceMiles: row.distanceMiles === null ? null : Number(row.distanceMiles),
+    proposedDate: (row.proposedDate as string | null) ?? null,
+    proposedStartTime: (row.proposedStartTime as string | null) ?? null,
+    proposedEndTime: (row.proposedEndTime as string | null) ?? null,
+    providerResponseNote: (row.providerResponseNote as string | null) ?? null,
   };
 }
 
@@ -412,7 +423,11 @@ export async function getServiceRequestForRequester(requestId: number, requester
       p.hourly_rate_cents as "hourlyRateCents",
       rpm.status,
       rpm.match_source as "matchSource",
-      rpm.distance_miles as "distanceMiles"
+      rpm.distance_miles as "distanceMiles",
+      to_char(rpm.proposed_date, 'YYYY-MM-DD') as "proposedDate",
+      to_char(rpm.proposed_start_time, 'HH24:MI') as "proposedStartTime",
+      to_char(rpm.proposed_end_time, 'HH24:MI') as "proposedEndTime",
+      rpm.provider_response_note as "providerResponseNote"
     FROM request_provider_matches rpm
     JOIN service_requests sr ON sr.id = rpm.service_request_id
     JOIN provider_profiles p ON p.id = rpm.provider_profile_id
