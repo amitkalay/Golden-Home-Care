@@ -89,6 +89,17 @@ function getOnDemandAvailabilitySource(provider, request, now) {
   return requestedStart - nowLocalEpochMinutes(now) >= noticeMinutes ? "on_demand" : null;
 }
 
+function hasOverlappingConfirmedBooking(provider, request) {
+  return provider.bookings?.some((booking) => {
+    return (
+      booking.status === "confirmed" &&
+      booking.bookingDate === request.requestedDate &&
+      booking.startTime < request.windowEndTime &&
+      booking.endTime > request.windowStartTime
+    );
+  }) ?? false;
+}
+
 export function findRequestProviderMatches(providers, request, { now = new Date() } = {}) {
   const targetProviderId = request.targetProviderId ?? null;
 
@@ -97,6 +108,7 @@ export function findRequestProviderMatches(providers, request, { now = new Date(
     .map((provider) => {
       if (provider.status !== "active") return null;
       if (!hasService(provider, request.serviceType)) return null;
+      if (hasOverlappingConfirmedBooking(provider, request)) return null;
 
       const distance = getCoveredDistance(provider, request.location);
       if (distance === null) return null;

@@ -2,6 +2,8 @@ import { ensureServiceRequestTables, getPool, getSql } from "../lib/database";
 import { providerServiceLabels } from "../provider/services.js";
 import { findRequestProviderMatches } from "./matching.js";
 
+export type ServiceRequestStatus = "submitted" | "confirmed" | "completed" | "canceled";
+
 export type RequestProviderTarget = {
   id: number;
   displayName: string | null;
@@ -27,8 +29,9 @@ export type ServiceRequestRecord = {
   contactName: string;
   contactEmail: string;
   contactPhone: string;
-  status: "submitted";
+  status: ServiceRequestStatus;
   createdAt: Date | null;
+  booking: ServiceBookingRecord | null;
   matches: RequestProviderMatchRecord[];
 };
 
@@ -44,6 +47,16 @@ export type RequestProviderMatchRecord = {
   proposedStartTime: string | null;
   proposedEndTime: string | null;
   providerResponseNote: string | null;
+};
+
+export type ServiceBookingRecord = {
+  id: number;
+  providerProfileId: number;
+  providerDisplayName: string | null;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  status: "confirmed" | "completed" | "canceled";
 };
 
 type ServiceRequestInput = {
@@ -79,6 +92,12 @@ type RequestMatchCandidate = {
   minimumNoticeMinutes: number;
   services: Array<{ serviceType: string; label: string }>;
   availabilityWindows: Array<{ dayOfWeek: number; startTime: string; endTime: string }>;
+  bookings: Array<{
+    bookingDate: string;
+    startTime: string;
+    endTime: string;
+    status: "confirmed" | "completed" | "canceled";
+  }>;
 };
 
 type RequestProviderMatchInput = {
@@ -120,6 +139,49 @@ function normalizeAvailabilityWindows(windows: unknown) {
     }));
 }
 
+function normalizeBookings(bookings: unknown): RequestMatchCandidate["bookings"] {
+  return (Array.isArray(bookings) ? bookings : [])
+    .filter(
+      (
+        booking,
+      ): booking is {
+        bookingDate: string;
+        startTime: string;
+        endTime: string;
+        status?: unknown;
+      } => {
+        return (
+          typeof booking === "object" &&
+          booking !== null &&
+          typeof (booking as { bookingDate?: unknown }).bookingDate === "string" &&
+          typeof (booking as { startTime?: unknown }).startTime === "string" &&
+          typeof (booking as { endTime?: unknown }).endTime === "string"
+        );
+      },
+    )
+    .map((booking) => {
+      const status: "confirmed" | "completed" | "canceled" =
+        booking.status === "completed" || booking.status === "canceled"
+          ? booking.status
+          : "confirmed";
+
+      return {
+        bookingDate: booking.bookingDate,
+        startTime: booking.startTime,
+        endTime: booking.endTime,
+        status,
+      };
+    });
+}
+
+function normalizeServiceRequestStatus(status: unknown): ServiceRequestStatus {
+  if (status === "confirmed" || status === "completed" || status === "canceled") {
+    return status;
+  }
+
+  return "submitted";
+}
+
 function toProviderTarget(row: Record<string, unknown>): RequestProviderTarget {
   return {
     id: Number(row.id),
@@ -142,6 +204,7 @@ function toRequestMatchCandidate(row: Record<string, unknown>): RequestMatchCand
     minimumNoticeMinutes: row.minimumNoticeMinutes === null ? 120 : Number(row.minimumNoticeMinutes),
     services: normalizeServices(row.services),
     availabilityWindows: normalizeAvailabilityWindows(row.availabilityWindows),
+    bookings: normalizeBookings(row.bookings),
   };
 }
 
@@ -170,9 +233,24 @@ function toRequestProviderMatchRecord(row: Record<string, unknown>): RequestProv
   };
 }
 
+function toServiceBookingRecord(row: Record<string, unknown>): ServiceBookingRecord {
+  const status = row.status === "completed" || row.status === "canceled" ? row.status : "confirmed";
+
+  return {
+    id: Number(row.id),
+    providerProfileId: Number(row.providerProfileId),
+    providerDisplayName: (row.providerDisplayName as string | null) ?? null,
+    bookingDate: String(row.bookingDate),
+    startTime: String(row.startTime),
+    endTime: String(row.endTime),
+    status,
+  };
+}
+
 function toServiceRequestRecord(
   row: Record<string, unknown>,
   matches: RequestProviderMatchRecord[] = [],
+  booking: ServiceBookingRecord | null = null,
 ): ServiceRequestRecord {
   const matchPreference = row.matchPreference === "specific" ? "specific" : "any";
   const urgency = row.urgency === "urgent" || row.urgency === "flexible" ? row.urgency : "soon";
@@ -195,8 +273,9 @@ function toServiceRequestRecord(
     contactName: String(row.contactName),
     contactEmail: String(row.contactEmail),
     contactPhone: String(row.contactPhone),
-    status: "submitted",
+    status: normalizeServiceRequestStatus(row.status),
     createdAt: (row.createdAt as Date | null) ?? null,
+    booking,
     matches,
   };
 }
@@ -239,7 +318,23 @@ async function getRequestMatchCandidates(input: ServiceRequestInput) {
           WHERE paw.provider_profile_id = p.id
         ),
         '[]'
-      ) as "availabilityWindows"
+      ) as "availabilityWindows",
+      COALESCE(
+        (
+          SELECT json_agg(
+            json_build_object(
+              'bookingDate', to_char(sb.booking_date, 'YYYY-MM-DD'),
+              'startTime', to_char(sb.start_time, 'HH24:MI'),
+              'endTime', to_char(sb.end_time, 'HH24:MI'),
+              'status', sb.status
+            )
+            ORDER BY sb.booking_date, sb.start_time
+          )
+          FROM service_bookings sb
+          WHERE sb.provider_profile_id = p.id AND sb.status = 'confirmed'
+        ),
+        '[]'
+      ) as bookings
     FROM provider_profiles p
     WHERE p.status = 'active'
       AND (${targetProviderId} = 0 OR p.id = ${targetProviderId})
@@ -383,6 +478,72 @@ export async function createServiceRequest(
   }
 }
 
+async function getRequestMatchesForRequester(
+  requestId: number,
+  requesterUserId: string,
+  sql: ReturnType<typeof getSql> = getSql(),
+) {
+  const matchRows = await sql`
+    SELECT
+      rpm.id,
+      rpm.provider_profile_id as "providerProfileId",
+      p.display_name as "providerDisplayName",
+      p.hourly_rate_cents as "hourlyRateCents",
+      rpm.status,
+      rpm.match_source as "matchSource",
+      rpm.distance_miles as "distanceMiles",
+      to_char(rpm.proposed_date, 'YYYY-MM-DD') as "proposedDate",
+      to_char(rpm.proposed_start_time, 'HH24:MI') as "proposedStartTime",
+      to_char(rpm.proposed_end_time, 'HH24:MI') as "proposedEndTime",
+      rpm.provider_response_note as "providerResponseNote"
+    FROM request_provider_matches rpm
+    JOIN service_requests sr ON sr.id = rpm.service_request_id
+    JOIN provider_profiles p ON p.id = rpm.provider_profile_id
+    WHERE rpm.service_request_id = ${requestId}
+      AND sr.requester_user_id = ${requesterUserId}
+    ORDER BY
+      CASE rpm.status
+        WHEN 'accepted' THEN 0
+        WHEN 'proposed' THEN 1
+        WHEN 'pending' THEN 2
+        ELSE 3
+      END,
+      rpm.distance_miles ASC NULLS LAST,
+      rpm.created_at ASC
+  `;
+
+  return (matchRows as Array<Record<string, unknown>>).map((row) =>
+    toRequestProviderMatchRecord(row),
+  );
+}
+
+async function getRequestBookingForRequester(
+  requestId: number,
+  requesterUserId: string,
+  sql: ReturnType<typeof getSql> = getSql(),
+) {
+  const rows = await sql`
+    SELECT
+      sb.id,
+      sb.provider_profile_id as "providerProfileId",
+      p.display_name as "providerDisplayName",
+      to_char(sb.booking_date, 'YYYY-MM-DD') as "bookingDate",
+      to_char(sb.start_time, 'HH24:MI') as "startTime",
+      to_char(sb.end_time, 'HH24:MI') as "endTime",
+      sb.status
+    FROM service_bookings sb
+    JOIN service_requests sr ON sr.id = sb.service_request_id
+    JOIN provider_profiles p ON p.id = sb.provider_profile_id
+    WHERE sb.service_request_id = ${requestId}
+      AND sr.requester_user_id = ${requesterUserId}
+    ORDER BY sb.created_at DESC
+    LIMIT 1
+  `;
+  const records = rows as Array<Record<string, unknown>>;
+
+  return records[0] ? toServiceBookingRecord(records[0]) : null;
+}
+
 export async function getServiceRequestForRequester(requestId: number, requesterUserId: string) {
   const sql = getSql();
 
@@ -415,29 +576,127 @@ export async function getServiceRequestForRequester(requestId: number, requester
   const records = rows as Array<Record<string, unknown>>;
   if (!records[0]) return null;
 
-  const matchRows = await sql`
-    SELECT
-      rpm.id,
-      rpm.provider_profile_id as "providerProfileId",
-      p.display_name as "providerDisplayName",
-      p.hourly_rate_cents as "hourlyRateCents",
-      rpm.status,
-      rpm.match_source as "matchSource",
-      rpm.distance_miles as "distanceMiles",
-      to_char(rpm.proposed_date, 'YYYY-MM-DD') as "proposedDate",
-      to_char(rpm.proposed_start_time, 'HH24:MI') as "proposedStartTime",
-      to_char(rpm.proposed_end_time, 'HH24:MI') as "proposedEndTime",
-      rpm.provider_response_note as "providerResponseNote"
-    FROM request_provider_matches rpm
-    JOIN service_requests sr ON sr.id = rpm.service_request_id
-    JOIN provider_profiles p ON p.id = rpm.provider_profile_id
-    WHERE rpm.service_request_id = ${requestId}
-      AND sr.requester_user_id = ${requesterUserId}
-    ORDER BY rpm.distance_miles ASC NULLS LAST, rpm.created_at ASC
-  `;
-  const matches = (matchRows as Array<Record<string, unknown>>).map((row) =>
-    toRequestProviderMatchRecord(row),
-  );
+  const [matches, booking] = await Promise.all([
+    getRequestMatchesForRequester(requestId, requesterUserId, sql),
+    getRequestBookingForRequester(requestId, requesterUserId, sql),
+  ]);
 
-  return toServiceRequestRecord(records[0], matches);
+  return toServiceRequestRecord(records[0], matches, booking);
+}
+
+export async function getServiceRequestsForRequester(requesterUserId: string) {
+  const sql = getSql();
+
+  await ensureServiceRequestTables();
+  const rows = await sql`
+    SELECT
+      sr.id,
+      sr.requester_user_id as "requesterUserId",
+      sr.provider_profile_id as "providerProfileId",
+      p.display_name as "providerDisplayName",
+      sr.match_preference as "matchPreference",
+      sr.service_type as "serviceType",
+      sr.zip_code as "zipCode",
+      to_char(sr.requested_date, 'YYYY-MM-DD') as "requestedDate",
+      to_char(sr.window_start_time, 'HH24:MI') as "windowStartTime",
+      to_char(sr.window_end_time, 'HH24:MI') as "windowEndTime",
+      sr.duration_minutes as "durationMinutes",
+      sr.urgency,
+      sr.notes,
+      sr.contact_name as "contactName",
+      sr.contact_email as "contactEmail",
+      sr.contact_phone as "contactPhone",
+      sr.status,
+      sr.created_at as "createdAt"
+    FROM service_requests sr
+    LEFT JOIN provider_profiles p ON p.id = sr.provider_profile_id
+    WHERE sr.requester_user_id = ${requesterUserId}
+    ORDER BY sr.created_at DESC
+  `;
+  const records = rows as Array<Record<string, unknown>>;
+
+  return Promise.all(
+    records.map(async (record) => {
+      const requestId = Number(record.id);
+      const [matches, booking] = await Promise.all([
+        getRequestMatchesForRequester(requestId, requesterUserId, sql),
+        getRequestBookingForRequester(requestId, requesterUserId, sql),
+      ]);
+
+      return toServiceRequestRecord(record, matches, booking);
+    }),
+  );
+}
+
+export async function cancelServiceRequestForRequester(
+  requestId: number,
+  requesterUserId: string,
+  cancellationReason = "Canceled by requester",
+) {
+  const pool = getPool();
+  const client = await pool.connect();
+  let didBegin = false;
+
+  await ensureServiceRequestTables();
+
+  try {
+    await client.query("BEGIN");
+    didBegin = true;
+    const result = await client.query(
+      `
+        UPDATE service_requests
+        SET status = 'canceled', updated_at = now()
+        WHERE id = $1
+          AND requester_user_id = $2
+          AND status not in ('completed', 'canceled')
+        RETURNING id
+      `,
+      [requestId, requesterUserId],
+    );
+
+    if (!result.rows[0]) {
+      await client.query("ROLLBACK");
+      didBegin = false;
+      return false;
+    }
+
+    await client.query(
+      `
+        UPDATE service_bookings
+        SET
+          status = 'canceled',
+          canceled_at = now(),
+          canceled_by_user_id = $2,
+          cancellation_reason = $3,
+          updated_at = now()
+        WHERE service_request_id = $1
+          AND status <> 'canceled'
+      `,
+      [requestId, requesterUserId, cancellationReason],
+    );
+
+    await client.query(
+      `
+        UPDATE request_provider_matches
+        SET
+          status = 'expired',
+          responded_at = COALESCE(responded_at, now()),
+          updated_at = now()
+        WHERE service_request_id = $1
+          AND status in ('pending', 'proposed')
+      `,
+      [requestId],
+    );
+
+    await client.query("COMMIT");
+    didBegin = false;
+    return true;
+  } catch (error) {
+    if (didBegin) {
+      await client.query("ROLLBACK");
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
 }

@@ -59,6 +59,13 @@ function formatMatchStatus(status: string) {
   return "Pending response";
 }
 
+function formatRequestStatus(status: string) {
+  if (status === "confirmed") return "confirmed";
+  if (status === "completed") return "completed";
+  if (status === "canceled") return "canceled";
+  return "submitted";
+}
+
 export default async function RequestConfirmationPage({ params }: RequestConfirmationPageProps) {
   const user = await requireUser();
   const resolvedParams = params ? await params : {};
@@ -88,13 +95,17 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
       </header>
 
       <section className="provider-page-heading">
-        <h1>Request submitted</h1>
-        <p>Your request has been saved and matched with eligible providers.</p>
+        <h1>Request {formatRequestStatus(request.status)}</h1>
+        <p>
+          {request.booking?.status === "confirmed"
+            ? "A provider accepted this request and your booking is confirmed."
+            : "Your request has been saved and matched with eligible providers."}
+        </p>
       </section>
 
       <section className="request-confirmation-card">
         <p className="form-alert success full" role="status">
-          Request #{request.id} is submitted.
+          Request #{request.id} is {formatRequestStatus(request.status)}.
         </p>
 
         <div className="request-confirmation-grid">
@@ -132,6 +143,19 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
             <div>
               <h2>Notes</h2>
               <p>{request.notes}</p>
+            </div>
+          </section>
+        ) : null}
+
+        {request.booking ? (
+          <section className="request-notes">
+            <CalendarCheck2 size={19} />
+            <div>
+              <h2>Confirmed booking</h2>
+              <p>
+                {request.booking.providerDisplayName || "Provider"} · {formatDate(request.booking.bookingDate)} ·{" "}
+                {formatTime(request.booking.startTime)} - {formatTime(request.booking.endTime)}
+              </p>
             </div>
           </section>
         ) : null}
@@ -174,6 +198,9 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
         </section>
 
         <div className="request-actions">
+          <Link className="button button-outline" href="/account/requests">
+            View my requests
+          </Link>
           <Link className="button button-primary" href="/providers">
             Find more providers
           </Link>

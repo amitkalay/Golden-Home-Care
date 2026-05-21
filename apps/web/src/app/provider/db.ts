@@ -452,9 +452,57 @@ export async function acceptProviderRequestMatch(userId: string, matchId: number
   try {
     await client.query("BEGIN");
     didBegin = true;
-    const result = await client.query(
+    const matchResult = await client.query(
       `
-        UPDATE request_provider_matches rpm
+        SELECT
+          rpm.id,
+          rpm.service_request_id,
+          rpm.provider_profile_id,
+          to_char(sr.requested_date, 'YYYY-MM-DD') as booking_date,
+          to_char(sr.window_start_time, 'HH24:MI') as start_time,
+          to_char(sr.window_end_time, 'HH24:MI') as end_time
+        FROM request_provider_matches rpm
+        JOIN provider_profiles p ON p.id = rpm.provider_profile_id
+        JOIN service_requests sr ON sr.id = rpm.service_request_id
+        WHERE rpm.id = $1
+          AND p.user_id = $2
+          AND rpm.status = 'pending'
+          AND sr.status = 'submitted'
+        FOR UPDATE OF rpm, sr
+      `,
+      [matchId, userId],
+    );
+    const match = matchResult.rows[0];
+
+    if (!match) {
+      await client.query("ROLLBACK");
+      didBegin = false;
+      return false;
+    }
+
+    const conflictResult = await client.query(
+      `
+        SELECT id
+        FROM service_bookings
+        WHERE provider_profile_id = $1
+          AND booking_date = $2
+          AND status = 'confirmed'
+          AND start_time < $4
+          AND end_time > $3
+        LIMIT 1
+      `,
+      [match.provider_profile_id, match.booking_date, match.start_time, match.end_time],
+    );
+
+    if (conflictResult.rows[0]) {
+      await client.query("ROLLBACK");
+      didBegin = false;
+      return false;
+    }
+
+    await client.query(
+      `
+        UPDATE request_provider_matches
         SET
           status = 'accepted',
           proposed_date = NULL,
@@ -463,22 +511,54 @@ export async function acceptProviderRequestMatch(userId: string, matchId: number
           provider_response_note = NULL,
           responded_at = now(),
           updated_at = now()
-        FROM provider_profiles p
-        WHERE rpm.id = $1
-          AND rpm.provider_profile_id = p.id
-          AND p.user_id = $2
-          AND rpm.status = 'pending'
-        RETURNING rpm.service_request_id
+        WHERE id = $1
       `,
-      [matchId, userId],
+      [matchId],
     );
-    const serviceRequestId = result.rows[0]?.service_request_id;
 
-    if (!serviceRequestId) {
-      await client.query("ROLLBACK");
-      didBegin = false;
-      return false;
-    }
+    await client.query(
+      `
+        UPDATE service_requests
+        SET status = 'confirmed', updated_at = now()
+        WHERE id = $1
+      `,
+      [match.service_request_id],
+    );
+
+    await client.query(
+      `
+        INSERT INTO service_bookings (
+          service_request_id,
+          provider_profile_id,
+          request_provider_match_id,
+          booking_date,
+          start_time,
+          end_time,
+          status,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, 'confirmed', now())
+        ON CONFLICT (service_request_id) DO UPDATE SET
+          provider_profile_id = EXCLUDED.provider_profile_id,
+          request_provider_match_id = EXCLUDED.request_provider_match_id,
+          booking_date = EXCLUDED.booking_date,
+          start_time = EXCLUDED.start_time,
+          end_time = EXCLUDED.end_time,
+          status = 'confirmed',
+          canceled_at = NULL,
+          canceled_by_user_id = NULL,
+          cancellation_reason = NULL,
+          updated_at = now()
+      `,
+      [
+        match.service_request_id,
+        match.provider_profile_id,
+        matchId,
+        match.booking_date,
+        match.start_time,
+        match.end_time,
+      ],
+    );
 
     await client.query(
       `
@@ -491,7 +571,26 @@ export async function acceptProviderRequestMatch(userId: string, matchId: number
           AND id <> $2
           AND status in ('pending', 'proposed')
       `,
-      [serviceRequestId, matchId],
+      [match.service_request_id, matchId],
+    );
+
+    await client.query(
+      `
+        UPDATE request_provider_matches rpm
+        SET
+          status = 'expired',
+          responded_at = COALESCE(rpm.responded_at, now()),
+          updated_at = now()
+        FROM service_requests sr
+        WHERE rpm.service_request_id = sr.id
+          AND rpm.provider_profile_id = $1
+          AND rpm.id <> $2
+          AND rpm.status in ('pending', 'proposed')
+          AND sr.requested_date = $3
+          AND sr.window_start_time < $5
+          AND sr.window_end_time > $4
+      `,
+      [match.provider_profile_id, matchId, match.booking_date, match.start_time, match.end_time],
     );
 
     await client.query("COMMIT");

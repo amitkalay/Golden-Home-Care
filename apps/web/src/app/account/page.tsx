@@ -58,6 +58,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           Golden Home Care
         </Link>
         <nav className="provider-nav" aria-label="Account navigation">
+          <Link href="/account/requests">My requests</Link>
           <Link href="/providers">Find providers</Link>
           <Link href="/provider/onboarding">Become a provider</Link>
           <Link href="/provider">Provider dashboard</Link>
