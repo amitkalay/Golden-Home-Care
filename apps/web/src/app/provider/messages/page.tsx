@@ -2,6 +2,7 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { CalendarClock, CheckCircle2, Clock, MapPin, MessageCircle, XCircle } from "lucide-react";
 import { authOptions } from "../../lib/auth";
+import { getUnreadNotificationCount } from "../../notifications/db";
 import {
   acceptProviderRequestMatch,
   declineProviderRequestMatch,
@@ -242,8 +243,11 @@ export default async function ProviderMessagesPage({ searchParams }: ProviderMes
   }
 
   await ensureDraftProviderProfile(session.user.id, session.user.name);
-  const profile = await getProviderProfileByUserId(session.user.id);
-  const requests = await getProviderRequestInbox(session.user.id);
+  const [profile, requests, notificationCount] = await Promise.all([
+    getProviderProfileByUserId(session.user.id),
+    getProviderRequestInbox(session.user.id),
+    getUnreadNotificationCount(session.user.id),
+  ]);
   const params = searchParams ? await searchParams : {};
   const activeTab = getTab(getParam(params.tab));
   const statusMessage = getStatusMessage(getParam(params.status));
@@ -260,6 +264,7 @@ export default async function ProviderMessagesPage({ searchParams }: ProviderMes
     <ProviderShell
       title="Incoming requests"
       copy="Review matched service requests and respond to families."
+      notificationCount={notificationCount}
     >
       {statusMessage ? (
         <p className={statusMessage.className} role={statusMessage.className.includes("error") ? "alert" : "status"}>

@@ -5,6 +5,7 @@ import { requireUser } from "../lib/auth";
 import { getUserAccount } from "./db";
 import { saveAccountProfile } from "./actions";
 import { SignOutButton } from "../sign-out-button";
+import { getUnreadNotificationCount } from "../notifications/db";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,10 @@ function getStatusMessage(status?: string) {
 
 export default async function AccountPage({ searchParams }: AccountPageProps) {
   const user = await requireUser();
-  const account = await getUserAccount(user.id);
+  const [account, unreadNotificationCount] = await Promise.all([
+    getUserAccount(user.id),
+    getUnreadNotificationCount(user.id),
+  ]);
   const params = searchParams ? await searchParams : {};
   const status = Array.isArray(params.status) ? params.status[0] : params.status;
   const statusMessage = getStatusMessage(status);
@@ -58,6 +62,10 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
           Golden Home Care
         </Link>
         <nav className="provider-nav" aria-label="Account navigation">
+          <Link className="notification-nav-link" href="/account/notifications">
+            Notifications
+            {unreadNotificationCount ? <span>{unreadNotificationCount}</span> : null}
+          </Link>
           <Link href="/account/requests">My requests</Link>
           <Link href="/providers">Find providers</Link>
           <Link href="/provider/onboarding">Become a provider</Link>

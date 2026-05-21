@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { CalendarCheck2, Clock, Home, MapPin, MessageCircle, XCircle } from "lucide-react";
 import { requireUser } from "../../lib/auth";
+import { getUnreadNotificationCount } from "../../notifications/db";
 import { cancelServiceRequest } from "../../requests/actions";
 import type { ServiceRequestRecord } from "../../requests/db";
 import { getServiceRequestsForRequester } from "../../requests/db";
@@ -209,7 +210,10 @@ function RequestCard({ request }: { request: ServiceRequestRecord }) {
 
 export default async function AccountRequestsPage({ searchParams }: AccountRequestsPageProps) {
   const user = await requireUser();
-  const requests = await getServiceRequestsForRequester(user.id);
+  const [requests, unreadNotificationCount] = await Promise.all([
+    getServiceRequestsForRequester(user.id),
+    getUnreadNotificationCount(user.id),
+  ]);
   const params = searchParams ? await searchParams : {};
   const activeTab = getTab(getParam(params.tab));
   const statusMessage = getStatusMessage(getParam(params.status));
@@ -232,6 +236,10 @@ export default async function AccountRequestsPage({ searchParams }: AccountReque
         </Link>
         <nav className="provider-nav" aria-label="Account request navigation">
           <Link href="/account">Account</Link>
+          <Link className="notification-nav-link" href="/account/notifications">
+            Notifications
+            {unreadNotificationCount ? <span>{unreadNotificationCount}</span> : null}
+          </Link>
           <Link href="/providers">Find providers</Link>
           <Link href="/provider">Provider dashboard</Link>
         </nav>
