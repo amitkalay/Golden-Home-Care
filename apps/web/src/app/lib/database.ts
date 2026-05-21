@@ -4,6 +4,7 @@ let sqlClient: ReturnType<typeof neon> | null = null;
 let poolClient: Pool | null = null;
 let authTablesReady: Promise<void> | null = null;
 let providerTablesReady: Promise<void> | null = null;
+let serviceRequestTablesReady: Promise<void> | null = null;
 
 export function getDatabaseUrl() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -111,6 +112,14 @@ export async function ensureProviderTables() {
   return providerTablesReady;
 }
 
+export async function ensureServiceRequestTables() {
+  if (!serviceRequestTablesReady) {
+    serviceRequestTablesReady = createServiceRequestTables();
+  }
+
+  return serviceRequestTablesReady;
+}
+
 async function createProviderTables() {
   const sql = getSql();
 
@@ -194,5 +203,56 @@ async function createProviderTables() {
   await sql`
     CREATE INDEX IF NOT EXISTS provider_availability_windows_profile_idx
     ON provider_availability_windows(provider_profile_id)
+  `;
+}
+
+async function createServiceRequestTables() {
+  const sql = getSql();
+
+  await ensureProviderTables();
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS service_requests (
+      id bigint generated always as identity primary key,
+      requester_user_id text not null references users(id) on delete cascade,
+      provider_profile_id bigint references provider_profiles(id) on delete set null,
+      match_preference text not null default 'any',
+      service_type text not null,
+      zip_code varchar(10) not null,
+      latitude double precision,
+      longitude double precision,
+      requested_date date not null,
+      window_start_time time not null,
+      window_end_time time not null,
+      duration_minutes integer not null,
+      urgency text not null default 'soon',
+      notes text,
+      contact_name text not null,
+      contact_email text not null,
+      contact_phone text not null,
+      status text not null default 'submitted',
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      constraint service_requests_match_preference_check check (match_preference in ('any', 'specific')),
+      constraint service_requests_urgency_check check (urgency in ('urgent', 'soon', 'flexible')),
+      constraint service_requests_status_check check (status in ('submitted')),
+      constraint service_requests_time_check check (window_start_time < window_end_time),
+      constraint service_requests_duration_check check (duration_minutes in (30, 60, 90, 120, 180, 240))
+    )
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS service_requests_requester_idx
+    ON service_requests(requester_user_id, created_at DESC)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS service_requests_provider_idx
+    ON service_requests(provider_profile_id)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS service_requests_status_idx
+    ON service_requests(status)
   `;
 }
