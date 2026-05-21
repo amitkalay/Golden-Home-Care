@@ -5,10 +5,17 @@ import { redirect } from "next/navigation";
 import { requireUser } from "../lib/auth";
 import { geocodeZipCode } from "../lib/zip-geocode";
 import {
+  cancelServiceRequestForRequester,
   createServiceRequest as createServiceRequestRecord,
   getActiveRequestProviderTarget,
 } from "./db";
 import { parseServiceRequestForm } from "./validation.js";
+
+function parseRequestId(formData: FormData) {
+  const requestId = Number.parseInt(String(formData.get("requestId") ?? ""), 10);
+
+  return Number.isInteger(requestId) && requestId > 0 ? requestId : null;
+}
 
 export async function createServiceRequest(formData: FormData) {
   const user = await requireUser();
@@ -65,4 +72,29 @@ export async function createServiceRequest(formData: FormData) {
   revalidatePath("/requests/new");
   revalidatePath(`/requests/${requestId}`);
   redirect(`/requests/${requestId}`);
+}
+
+export async function cancelServiceRequest(formData: FormData) {
+  const user = await requireUser();
+  const requestId = parseRequestId(formData);
+
+  if (!requestId) {
+    redirect("/account/requests?status=invalid");
+  }
+
+  let updated = false;
+  try {
+    updated = await cancelServiceRequestForRequester(requestId, user.id);
+  } catch (error) {
+    console.error("Failed to cancel service request", error);
+    redirect("/account/requests?status=error");
+  }
+
+  if (!updated) {
+    redirect("/account/requests?status=invalid");
+  }
+
+  revalidatePath("/account/requests");
+  revalidatePath(`/requests/${requestId}`);
+  redirect("/account/requests?status=canceled&tab=canceled");
 }

@@ -42,7 +42,7 @@ describe("service request flow source checks", () => {
 
     assert.match(confirmationPage, /requireUser\(\)/);
     assert.match(confirmationPage, /getServiceRequestForRequester\(requestId, user\.id\)/);
-    assert.match(confirmationPage, /Request submitted/);
+    assert.match(confirmationPage, /formatRequestStatus\(request\.status\)/);
     assert.match(confirmationPage, /request\.matches/);
     assert.match(db, /request_provider_matches/);
     assert.match(db, /sr\.requester_user_id = \$\{requesterUserId\}/);

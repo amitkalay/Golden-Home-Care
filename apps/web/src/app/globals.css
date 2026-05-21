@@ -581,13 +581,20 @@
   color: #256534;
 }
 
+.provider-status-badge.status-confirmed,
+.provider-status-badge.status-completed {
+  background: #e7f6ea;
+  color: #256534;
+}
+
 .provider-status-badge.status-proposed {
   background: #fff1ce;
   color: #7a4f00;
 }
 
 .provider-status-badge.status-declined,
-.provider-status-badge.status-expired {
+.provider-status-badge.status-expired,
+.provider-status-badge.status-canceled {
   background: #f5e7e3;
   color: #8a2f1c;
 }

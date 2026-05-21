@@ -26,6 +26,7 @@ function provider(overrides = {}) {
     serviceRadiusMiles: 10,
     services: [{ serviceType: "companionship" }],
     availabilityWindows: [{ dayOfWeek: 4, startTime: "08:00", endTime: "13:00" }],
+    bookings: [],
     onDemandAvailable: false,
     minimumNoticeMinutes: 120,
     ...overrides,
@@ -91,5 +92,45 @@ describe("request provider matching", () => {
     ], request({ targetProviderId: 2 }));
 
     assert.deepEqual(results.map((item) => item.providerProfileId), [2]);
+  });
+
+  it("excludes providers with overlapping confirmed bookings", () => {
+    const results = findRequestProviderMatches([
+      provider({
+        id: 1,
+        bookings: [
+          {
+            bookingDate: "2026-05-21",
+            startTime: "10:00",
+            endTime: "11:00",
+            status: "confirmed",
+          },
+        ],
+      }),
+      provider({
+        id: 2,
+        bookings: [
+          {
+            bookingDate: "2026-05-21",
+            startTime: "12:00",
+            endTime: "13:00",
+            status: "confirmed",
+          },
+        ],
+      }),
+      provider({
+        id: 3,
+        bookings: [
+          {
+            bookingDate: "2026-05-21",
+            startTime: "10:00",
+            endTime: "11:00",
+            status: "canceled",
+          },
+        ],
+      }),
+    ], request({ windowStartTime: "09:00", windowEndTime: "12:00" }));
+
+    assert.deepEqual(results.map((item) => item.providerProfileId), [2, 3]);
   });
 });

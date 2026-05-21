@@ -235,9 +235,17 @@ async function createServiceRequestTables() {
       updated_at timestamptz not null default now(),
       constraint service_requests_match_preference_check check (match_preference in ('any', 'specific')),
       constraint service_requests_urgency_check check (urgency in ('urgent', 'soon', 'flexible')),
-      constraint service_requests_status_check check (status in ('submitted')),
+      constraint service_requests_status_check check (status in ('submitted', 'confirmed', 'completed', 'canceled')),
       constraint service_requests_time_check check (window_start_time < window_end_time),
       constraint service_requests_duration_check check (duration_minutes in (30, 60, 90, 120, 180, 240))
+    )
+  `;
+
+  await sql`ALTER TABLE service_requests DROP CONSTRAINT IF EXISTS service_requests_status_check`;
+  await sql`
+    ALTER TABLE service_requests
+    ADD CONSTRAINT service_requests_status_check check (
+      status in ('submitted', 'confirmed', 'completed', 'canceled')
     )
   `;
 
@@ -280,6 +288,32 @@ async function createServiceRequestTables() {
   `;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS service_bookings (
+      id bigint generated always as identity primary key,
+      service_request_id bigint not null references service_requests(id) on delete cascade,
+      provider_profile_id bigint not null references provider_profiles(id) on delete cascade,
+      request_provider_match_id bigint references request_provider_matches(id) on delete set null,
+      booking_date date not null,
+      start_time time not null,
+      end_time time not null,
+      status text not null default 'confirmed',
+      canceled_at timestamptz,
+      canceled_by_user_id text references users(id) on delete set null,
+      cancellation_reason text,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      unique(service_request_id),
+      constraint service_bookings_status_check check (status in ('confirmed', 'completed', 'canceled')),
+      constraint service_bookings_time_check check (start_time < end_time)
+    )
+  `;
+
+  await sql`ALTER TABLE service_bookings ADD COLUMN IF NOT EXISTS request_provider_match_id bigint references request_provider_matches(id) on delete set null`;
+  await sql`ALTER TABLE service_bookings ADD COLUMN IF NOT EXISTS canceled_at timestamptz`;
+  await sql`ALTER TABLE service_bookings ADD COLUMN IF NOT EXISTS canceled_by_user_id text references users(id) on delete set null`;
+  await sql`ALTER TABLE service_bookings ADD COLUMN IF NOT EXISTS cancellation_reason text`;
+
+  await sql`
     CREATE INDEX IF NOT EXISTS service_requests_requester_idx
     ON service_requests(requester_user_id, created_at DESC)
   `;
@@ -302,5 +336,15 @@ async function createServiceRequestTables() {
   await sql`
     CREATE INDEX IF NOT EXISTS request_provider_matches_provider_idx
     ON request_provider_matches(provider_profile_id, status)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS service_bookings_provider_time_idx
+    ON service_bookings(provider_profile_id, booking_date, start_time, end_time, status)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS service_bookings_request_idx
+    ON service_bookings(service_request_id)
   `;
 }
