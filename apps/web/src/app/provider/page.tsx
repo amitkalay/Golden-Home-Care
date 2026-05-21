@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "../lib/auth";
+import { getUnreadNotificationCount } from "../notifications/db";
 import { ensureDraftProviderProfile, getProviderProfileByUserId } from "./db";
 import { ProviderDashboardCards, ProviderShell } from "./ui";
 
@@ -20,7 +21,10 @@ export default async function ProviderPage({ searchParams }: ProviderPageProps) 
   }
 
   await ensureDraftProviderProfile(session.user.id, session.user.name);
-  const profile = await getProviderProfileByUserId(session.user.id);
+  const [profile, notificationCount] = await Promise.all([
+    getProviderProfileByUserId(session.user.id),
+    getUnreadNotificationCount(session.user.id),
+  ]);
   const params = searchParams ? await searchParams : {};
   const profileStatus = Array.isArray(params.profile) ? params.profile[0] : params.profile;
 
@@ -28,6 +32,7 @@ export default async function ProviderPage({ searchParams }: ProviderPageProps) 
     <ProviderShell
       title="Provider dashboard"
       copy="Manage your profile, availability, and public marketplace presence."
+      notificationCount={notificationCount}
     >
       {profileStatus === "active" ? (
         <p className="form-alert success" role="status">

@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "../../lib/auth";
+import { getUnreadNotificationCount } from "../../notifications/db";
 import { ensureDraftProviderProfile, getProviderProfileByUserId } from "../db";
 import { ProviderAvailabilityForm, ProviderShell } from "../ui";
 
@@ -20,7 +21,10 @@ export default async function ProviderAvailabilityPage({ searchParams }: Availab
   }
 
   await ensureDraftProviderProfile(session.user.id, session.user.name);
-  const profile = await getProviderProfileByUserId(session.user.id);
+  const [profile, notificationCount] = await Promise.all([
+    getProviderProfileByUserId(session.user.id),
+    getUnreadNotificationCount(session.user.id),
+  ]);
   const params = searchParams ? await searchParams : {};
   const status = Array.isArray(params.status) ? params.status[0] : params.status;
 
@@ -28,6 +32,7 @@ export default async function ProviderAvailabilityPage({ searchParams }: Availab
     <ProviderShell
       title="Availability"
       copy="Set recurring weekly windows so families know when they can request your support."
+      notificationCount={notificationCount}
     >
       <ProviderAvailabilityForm profile={profile} status={status} />
     </ProviderShell>

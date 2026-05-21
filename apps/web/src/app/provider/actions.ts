@@ -22,6 +22,11 @@ import {
   saveProviderAvailability as saveProviderAvailabilityRecord,
   saveProviderProfile as saveProviderProfileRecord,
 } from "./db";
+import {
+  notifyAfterProviderAccepted,
+  notifyRequesterOfProviderDecline,
+  notifyRequesterOfProviderProposal,
+} from "../notifications/db";
 
 async function requireProviderUserId() {
   const session = await getServerSession(authOptions);
@@ -128,6 +133,13 @@ export async function acceptProviderRequestMatch(formData: FormData) {
     redirect("/provider/messages?status=invalid");
   }
 
+  try {
+    await notifyAfterProviderAccepted(matchId);
+  } catch (error) {
+    console.error("Failed to send provider acceptance notifications", error);
+  }
+
+  revalidatePath("/account/notifications");
   revalidatePath("/provider/messages");
   redirect("/provider/messages?status=accepted&tab=accepted");
 }
@@ -152,6 +164,13 @@ export async function declineProviderRequestMatch(formData: FormData) {
     redirect("/provider/messages?status=invalid");
   }
 
+  try {
+    await notifyRequesterOfProviderDecline(matchId);
+  } catch (error) {
+    console.error("Failed to send provider decline notification", error);
+  }
+
+  revalidatePath("/account/notifications");
   revalidatePath("/provider/messages");
   redirect("/provider/messages?status=declined&tab=closed");
 }
@@ -181,6 +200,13 @@ export async function proposeProviderRequestTime(formData: FormData) {
     redirect("/provider/messages?status=invalid");
   }
 
+  try {
+    await notifyRequesterOfProviderProposal(result.data.matchId);
+  } catch (error) {
+    console.error("Failed to send provider proposal notification", error);
+  }
+
+  revalidatePath("/account/notifications");
   revalidatePath("/provider/messages");
   redirect("/provider/messages?status=proposed&tab=proposed");
 }

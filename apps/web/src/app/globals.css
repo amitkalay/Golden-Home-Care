@@ -111,6 +111,24 @@
   font-size: inherit;
 }
 
+.notification-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.notification-nav-link span {
+  display: inline-grid;
+  min-width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--gold);
+  color: #fffdf8;
+  font-size: 12px;
+  line-height: 1;
+}
+
 .provider-page-heading,
 .provider-dashboard-grid,
 .provider-profile-form,
@@ -521,6 +539,79 @@
   gap: 14px;
 }
 
+.notification-toolbar,
+.notification-list {
+  width: min(100%, 980px);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.notification-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.notification-list {
+  display: grid;
+  gap: 12px;
+}
+
+.notification-card {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffef9;
+  box-shadow: 0 12px 28px rgba(74, 51, 17, 0.09);
+}
+
+.notification-card.unread {
+  border-color: #d7e5d8;
+  background: #fbfff8;
+}
+
+.notification-card header {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.notification-card h2 {
+  margin: 0 0 3px;
+  color: var(--deep);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.notification-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.notification-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 999px;
+  background: #f4faf3;
+  color: var(--deep);
+}
+
+.notification-email-status {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
 .provider-inbox-card {
   display: grid;
   gap: 15px;
@@ -923,9 +1014,14 @@
     flex-direction: column;
   }
 
+  .notification-toolbar,
   .provider-inbox-card-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .notification-card header {
+    grid-template-columns: auto 1fr;
   }
 
   .provider-inbox-card-time {

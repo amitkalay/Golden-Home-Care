@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, Home, Trash2 } from "lucide-react";
 import { requireUser } from "../../lib/auth";
+import { getUnreadNotificationCount } from "../../notifications/db";
 import { getUserAccount } from "../db";
 import { deleteCurrentAccount } from "../actions";
 
@@ -15,7 +16,10 @@ type DeleteAccountPageProps = {
 
 export default async function DeleteAccountPage({ searchParams }: DeleteAccountPageProps) {
   const user = await requireUser();
-  const account = await getUserAccount(user.id);
+  const [account, unreadNotificationCount] = await Promise.all([
+    getUserAccount(user.id),
+    getUnreadNotificationCount(user.id),
+  ]);
   const params = searchParams ? await searchParams : {};
   const step = Array.isArray(params.step) ? params.step[0] : params.step;
   const status = Array.isArray(params.status) ? params.status[0] : params.status;
@@ -30,6 +34,10 @@ export default async function DeleteAccountPage({ searchParams }: DeleteAccountP
         </Link>
         <nav className="provider-nav" aria-label="Account navigation">
           <Link href="/account">Account</Link>
+          <Link className="notification-nav-link" href="/account/notifications">
+            Notifications
+            {unreadNotificationCount ? <span>{unreadNotificationCount}</span> : null}
+          </Link>
           <Link href="/providers">Find providers</Link>
         </nav>
       </header>

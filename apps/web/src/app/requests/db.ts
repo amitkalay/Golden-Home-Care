@@ -642,6 +642,20 @@ export async function cancelServiceRequestForRequester(
   try {
     await client.query("BEGIN");
     didBegin = true;
+    const affectedMatchesResult = await client.query(
+      `
+        SELECT rpm.id
+        FROM request_provider_matches rpm
+        JOIN service_requests sr ON sr.id = rpm.service_request_id
+        WHERE sr.id = $1
+          AND sr.requester_user_id = $2
+          AND sr.status not in ('completed', 'canceled')
+          AND rpm.status in ('pending', 'proposed', 'accepted')
+        FOR UPDATE OF rpm
+      `,
+      [requestId, requesterUserId],
+    );
+    const affectedMatchIds = affectedMatchesResult.rows.map((row) => Number(row.id));
     const result = await client.query(
       `
         UPDATE service_requests
@@ -657,7 +671,7 @@ export async function cancelServiceRequestForRequester(
     if (!result.rows[0]) {
       await client.query("ROLLBACK");
       didBegin = false;
-      return false;
+      return { updated: false, affectedMatchIds: [] as number[] };
     }
 
     await client.query(
@@ -690,7 +704,7 @@ export async function cancelServiceRequestForRequester(
 
     await client.query("COMMIT");
     didBegin = false;
-    return true;
+    return { updated: true, affectedMatchIds };
   } catch (error) {
     if (didBegin) {
       await client.query("ROLLBACK");

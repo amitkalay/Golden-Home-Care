@@ -9,6 +9,10 @@ import {
   createServiceRequest as createServiceRequestRecord,
   getActiveRequestProviderTarget,
 } from "./db";
+import {
+  notifyProvidersOfNewRequest,
+  notifyProvidersOfRequesterCancellation,
+} from "../notifications/db";
 import { parseServiceRequestForm } from "./validation.js";
 
 function parseRequestId(formData: FormData) {
@@ -69,8 +73,15 @@ export async function createServiceRequest(formData: FormData) {
     redirect("/requests/new?status=error");
   }
 
+  try {
+    await notifyProvidersOfNewRequest(requestId);
+  } catch (error) {
+    console.error("Failed to notify matched providers", error);
+  }
+
   revalidatePath("/requests/new");
   revalidatePath(`/requests/${requestId}`);
+  revalidatePath("/account/notifications");
   redirect(`/requests/${requestId}`);
 }
 
@@ -82,19 +93,26 @@ export async function cancelServiceRequest(formData: FormData) {
     redirect("/account/requests?status=invalid");
   }
 
-  let updated = false;
+  let updateResult: { updated: boolean; affectedMatchIds: number[] };
   try {
-    updated = await cancelServiceRequestForRequester(requestId, user.id);
+    updateResult = await cancelServiceRequestForRequester(requestId, user.id);
   } catch (error) {
     console.error("Failed to cancel service request", error);
     redirect("/account/requests?status=error");
   }
 
-  if (!updated) {
+  if (!updateResult.updated) {
     redirect("/account/requests?status=invalid");
   }
 
+  try {
+    await notifyProvidersOfRequesterCancellation(updateResult.affectedMatchIds);
+  } catch (error) {
+    console.error("Failed to notify providers about request cancellation", error);
+  }
+
   revalidatePath("/account/requests");
+  revalidatePath("/account/notifications");
   revalidatePath(`/requests/${requestId}`);
   redirect("/account/requests?status=canceled&tab=canceled");
 }

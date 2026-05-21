@@ -20,10 +20,12 @@ export function ProviderShell({
   title,
   copy,
   children,
+  notificationCount = 0,
 }: {
   title: string;
   copy: string;
   children: React.ReactNode;
+  notificationCount?: number;
 }) {
   return (
     <main className="provider-shell">
@@ -36,6 +38,10 @@ export function ProviderShell({
           <Link href="/provider/profile">Profile</Link>
           <Link href="/provider/availability">Availability</Link>
           <Link href="/provider/messages">Messages</Link>
+          <Link className="notification-nav-link" href="/account/notifications">
+            Notifications
+            {notificationCount ? <span>{notificationCount}</span> : null}
+          </Link>
           <Link href="/providers">Public search</Link>
           <Link href="/account">Account</Link>
           <SignOutButton className="nav-link-button" />

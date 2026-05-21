@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "../../lib/auth";
+import { getUnreadNotificationCount } from "../../notifications/db";
 import { ensureDraftProviderProfile, getProviderProfileByUserId } from "../db";
 import { ProviderProfileForm, ProviderShell } from "../ui";
 
@@ -20,7 +21,10 @@ export default async function ProviderOnboardingPage({ searchParams }: Onboardin
   }
 
   await ensureDraftProviderProfile(session.user.id, session.user.name);
-  const profile = await getProviderProfileByUserId(session.user.id);
+  const [profile, notificationCount] = await Promise.all([
+    getProviderProfileByUserId(session.user.id),
+    getUnreadNotificationCount(session.user.id),
+  ]);
   const params = searchParams ? await searchParams : {};
   const status = Array.isArray(params.status) ? params.status[0] : params.status;
 
@@ -28,6 +32,7 @@ export default async function ProviderOnboardingPage({ searchParams }: Onboardin
     <ProviderShell
       title="Provider onboarding"
       copy="Complete these details to publish your provider profile in family search."
+      notificationCount={notificationCount}
     >
       <ProviderProfileForm profile={profile} mode="onboarding" status={status} />
     </ProviderShell>

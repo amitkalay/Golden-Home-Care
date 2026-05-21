@@ -5,6 +5,7 @@ let poolClient: Pool | null = null;
 let authTablesReady: Promise<void> | null = null;
 let providerTablesReady: Promise<void> | null = null;
 let serviceRequestTablesReady: Promise<void> | null = null;
+let notificationTablesReady: Promise<void> | null = null;
 
 export function getDatabaseUrl() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -118,6 +119,14 @@ export async function ensureServiceRequestTables() {
   }
 
   return serviceRequestTablesReady;
+}
+
+export async function ensureNotificationTables() {
+  if (!notificationTablesReady) {
+    notificationTablesReady = createNotificationTables();
+  }
+
+  return notificationTablesReady;
 }
 
 async function createProviderTables() {
@@ -346,5 +355,70 @@ async function createServiceRequestTables() {
   await sql`
     CREATE INDEX IF NOT EXISTS service_bookings_request_idx
     ON service_bookings(service_request_id)
+  `;
+}
+
+async function createNotificationTables() {
+  const sql = getSql();
+
+  await ensureServiceRequestTables();
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS notifications (
+      id bigint generated always as identity primary key,
+      recipient_user_id text not null references users(id) on delete cascade,
+      type text not null,
+      title text not null,
+      body text not null,
+      href text,
+      read_at timestamptz,
+      service_request_id bigint references service_requests(id) on delete cascade,
+      request_provider_match_id bigint references request_provider_matches(id) on delete set null,
+      service_booking_id bigint references service_bookings(id) on delete set null,
+      dedupe_key text not null unique,
+      email_status text not null default 'not_applicable',
+      email_to text,
+      email_subject text,
+      email_error text,
+      email_sent_at timestamptz,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      constraint notifications_email_status_check check (
+        email_status in ('not_applicable', 'pending', 'sent', 'failed', 'skipped')
+      )
+    )
+  `;
+
+  await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS href text`;
+  await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS read_at timestamptz`;
+  await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS service_request_id bigint references service_requests(id) on delete cascade`;
+  await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS request_provider_match_id bigint references request_provider_matches(id) on delete set null`;
+  await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS service_booking_id bigint references service_bookings(id) on delete set null`;
+  await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS email_status text not null default 'not_applicable'`;
+  await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS email_to text`;
+  await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS email_subject text`;
+  await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS email_error text`;
+  await sql`ALTER TABLE notifications ADD COLUMN IF NOT EXISTS email_sent_at timestamptz`;
+  await sql`ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_email_status_check`;
+  await sql`
+    ALTER TABLE notifications
+    ADD CONSTRAINT notifications_email_status_check check (
+      email_status in ('not_applicable', 'pending', 'sent', 'failed', 'skipped')
+    )
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS notifications_recipient_created_idx
+    ON notifications(recipient_user_id, created_at DESC)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS notifications_recipient_unread_idx
+    ON notifications(recipient_user_id, read_at)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS notifications_request_idx
+    ON notifications(service_request_id)
   `;
 }
