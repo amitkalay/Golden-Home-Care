@@ -376,9 +376,11 @@ export function ProviderDashboardCards({ profile }: { profile: ProviderProfileRe
       </article>
       <article className="provider-summary-card provider-summary-card-wide">
         <MessageCircle size={26} />
-        <span>Messages</span>
-        <strong>Not yet enabled</strong>
-        <p>Family messaging will connect here after the marketplace flow is ready.</p>
+        <span>Requests</span>
+        <strong>Inbox</strong>
+        <p>
+          <Link href="/provider/messages">Review incoming service requests</Link>
+        </p>
       </article>
     </div>
   );
