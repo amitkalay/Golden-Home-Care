@@ -39,6 +39,18 @@ function formatDate(value: string) {
   }).format(date);
 }
 
+function formatRate(rateCents: number | null) {
+  if (!rateCents) return "Rate pending";
+  return `$${Math.round(rateCents / 100)}/hr`;
+}
+
+function formatDistance(distanceMiles: number | null) {
+  if (distanceMiles === null) return "Distance unavailable";
+  const distance = distanceMiles < 10 ? distanceMiles.toFixed(1) : Math.round(distanceMiles).toString();
+
+  return `${distance} mi`;
+}
+
 export default async function RequestConfirmationPage({ params }: RequestConfirmationPageProps) {
   const user = await requireUser();
   const resolvedParams = params ? await params : {};
@@ -69,7 +81,7 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
 
       <section className="provider-page-heading">
         <h1>Request submitted</h1>
-        <p>Your request has been saved. Provider matching and responses will be added in the next workflow.</p>
+        <p>Your request has been saved and matched with eligible providers.</p>
       </section>
 
       <section className="request-confirmation-card">
@@ -115,6 +127,32 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
             </div>
           </section>
         ) : null}
+
+        <section className="request-notes">
+          <UserRound size={19} />
+          <div>
+            <h2>
+              {request.matches.length === 1
+                ? "1 provider match"
+                : `${request.matches.length} provider matches`}
+            </h2>
+            {request.matches.length ? (
+              <ul className="request-match-list">
+                {request.matches.map((match) => (
+                  <li key={match.id}>
+                    <strong>{match.providerDisplayName || `Provider #${match.providerProfileId}`}</strong>
+                    <span>
+                      {formatRate(match.hourlyRateCents)} · {formatDistance(match.distanceMiles)} ·{" "}
+                      {match.matchSource === "on_demand" ? "On-demand" : "Weekly availability"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p>No active providers matched this request yet. The request is still submitted.</p>
+            )}
+          </div>
+        </section>
 
         <div className="request-actions">
           <Link className="button button-primary" href="/providers">

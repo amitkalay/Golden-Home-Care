@@ -242,6 +242,26 @@ async function createServiceRequestTables() {
   `;
 
   await sql`
+    CREATE TABLE IF NOT EXISTS request_provider_matches (
+      id bigint generated always as identity primary key,
+      service_request_id bigint not null references service_requests(id) on delete cascade,
+      provider_profile_id bigint not null references provider_profiles(id) on delete cascade,
+      status text not null default 'pending',
+      match_source text not null,
+      distance_miles double precision,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now(),
+      unique(service_request_id, provider_profile_id),
+      constraint request_provider_matches_status_check check (
+        status in ('pending', 'accepted', 'declined', 'expired')
+      ),
+      constraint request_provider_matches_source_check check (
+        match_source in ('weekly', 'on_demand')
+      )
+    )
+  `;
+
+  await sql`
     CREATE INDEX IF NOT EXISTS service_requests_requester_idx
     ON service_requests(requester_user_id, created_at DESC)
   `;
@@ -254,5 +274,15 @@ async function createServiceRequestTables() {
   await sql`
     CREATE INDEX IF NOT EXISTS service_requests_status_idx
     ON service_requests(status)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS request_provider_matches_request_idx
+    ON request_provider_matches(service_request_id, status)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS request_provider_matches_provider_idx
+    ON request_provider_matches(provider_profile_id, status)
   `;
 }

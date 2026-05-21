@@ -436,12 +436,41 @@
   background: #f4faf3;
 }
 
+.request-notes > div {
+  min-width: 0;
+}
+
 .request-notes h2 {
   margin: 0 0 5px;
   color: var(--deep);
   font-family: Georgia, "Times New Roman", serif;
   font-size: 20px;
   letter-spacing: 0;
+}
+
+.request-match-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.request-match-list li {
+  display: grid;
+  gap: 3px;
+}
+
+.request-match-list strong {
+  color: var(--deep);
+  font-size: 15px;
+}
+
+.request-match-list span {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .request-actions {

@@ -1,5 +1,6 @@
-import { ensureServiceRequestTables, getSql } from "../lib/database";
+import { ensureServiceRequestTables, getPool, getSql } from "../lib/database";
 import { providerServiceLabels } from "../provider/services.js";
+import { findRequestProviderMatches } from "./matching.js";
 
 export type RequestProviderTarget = {
   id: number;
@@ -28,6 +29,17 @@ export type ServiceRequestRecord = {
   contactPhone: string;
   status: "submitted";
   createdAt: Date | null;
+  matches: RequestProviderMatchRecord[];
+};
+
+export type RequestProviderMatchRecord = {
+  id: number;
+  providerProfileId: number;
+  providerDisplayName: string | null;
+  hourlyRateCents: number | null;
+  status: "pending" | "accepted" | "declined" | "expired";
+  matchSource: "weekly" | "on_demand";
+  distanceMiles: number | null;
 };
 
 type ServiceRequestInput = {
@@ -51,6 +63,26 @@ type LocationInput = {
   longitude: number;
 } | null;
 
+type RequestMatchCandidate = {
+  id: number;
+  displayName: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  serviceRadiusMiles: number | null;
+  hourlyRateCents: number | null;
+  status: string;
+  onDemandAvailable: boolean;
+  minimumNoticeMinutes: number;
+  services: Array<{ serviceType: string; label: string }>;
+  availabilityWindows: Array<{ dayOfWeek: number; startTime: string; endTime: string }>;
+};
+
+type RequestProviderMatchInput = {
+  providerProfileId: number;
+  matchSource: "weekly" | "on_demand";
+  distanceMiles: number;
+};
+
 function normalizeServices(services: unknown) {
   return (Array.isArray(services) ? services : [])
     .filter((service): service is { serviceType: string } => {
@@ -66,6 +98,24 @@ function normalizeServices(services: unknown) {
     }));
 }
 
+function normalizeAvailabilityWindows(windows: unknown) {
+  return (Array.isArray(windows) ? windows : [])
+    .filter((window): window is { dayOfWeek: number; startTime: string; endTime: string } => {
+      return (
+        typeof window === "object" &&
+        window !== null &&
+        Number.isInteger(Number((window as { dayOfWeek?: unknown }).dayOfWeek)) &&
+        typeof (window as { startTime?: unknown }).startTime === "string" &&
+        typeof (window as { endTime?: unknown }).endTime === "string"
+      );
+    })
+    .map((window) => ({
+      dayOfWeek: Number(window.dayOfWeek),
+      startTime: window.startTime,
+      endTime: window.endTime,
+    }));
+}
+
 function toProviderTarget(row: Record<string, unknown>): RequestProviderTarget {
   return {
     id: Number(row.id),
@@ -75,7 +125,44 @@ function toProviderTarget(row: Record<string, unknown>): RequestProviderTarget {
   };
 }
 
-function toServiceRequestRecord(row: Record<string, unknown>): ServiceRequestRecord {
+function toRequestMatchCandidate(row: Record<string, unknown>): RequestMatchCandidate {
+  return {
+    id: Number(row.id),
+    displayName: (row.displayName as string | null) ?? null,
+    latitude: row.latitude === null ? null : Number(row.latitude),
+    longitude: row.longitude === null ? null : Number(row.longitude),
+    serviceRadiusMiles: row.serviceRadiusMiles === null ? null : Number(row.serviceRadiusMiles),
+    hourlyRateCents: row.hourlyRateCents === null ? null : Number(row.hourlyRateCents),
+    status: String(row.status),
+    onDemandAvailable: Boolean(row.onDemandAvailable),
+    minimumNoticeMinutes: row.minimumNoticeMinutes === null ? 120 : Number(row.minimumNoticeMinutes),
+    services: normalizeServices(row.services),
+    availabilityWindows: normalizeAvailabilityWindows(row.availabilityWindows),
+  };
+}
+
+function toRequestProviderMatchRecord(row: Record<string, unknown>): RequestProviderMatchRecord {
+  const status =
+    row.status === "accepted" || row.status === "declined" || row.status === "expired"
+      ? row.status
+      : "pending";
+  const matchSource = row.matchSource === "on_demand" ? "on_demand" : "weekly";
+
+  return {
+    id: Number(row.id),
+    providerProfileId: Number(row.providerProfileId),
+    providerDisplayName: (row.providerDisplayName as string | null) ?? null,
+    hourlyRateCents: row.hourlyRateCents === null ? null : Number(row.hourlyRateCents),
+    status,
+    matchSource,
+    distanceMiles: row.distanceMiles === null ? null : Number(row.distanceMiles),
+  };
+}
+
+function toServiceRequestRecord(
+  row: Record<string, unknown>,
+  matches: RequestProviderMatchRecord[] = [],
+): ServiceRequestRecord {
   const matchPreference = row.matchPreference === "specific" ? "specific" : "any";
   const urgency = row.urgency === "urgent" || row.urgency === "flexible" ? row.urgency : "soon";
 
@@ -99,7 +186,61 @@ function toServiceRequestRecord(row: Record<string, unknown>): ServiceRequestRec
     contactPhone: String(row.contactPhone),
     status: "submitted",
     createdAt: (row.createdAt as Date | null) ?? null,
+    matches,
   };
+}
+
+async function getRequestMatchCandidates(input: ServiceRequestInput) {
+  const sql = getSql();
+  const targetProviderId = input.matchPreference === "specific" ? input.providerProfileId ?? 0 : 0;
+
+  await ensureServiceRequestTables();
+  const rows = await sql`
+    SELECT
+      p.id,
+      p.display_name as "displayName",
+      p.latitude,
+      p.longitude,
+      p.service_radius_miles as "serviceRadiusMiles",
+      p.hourly_rate_cents as "hourlyRateCents",
+      p.status,
+      p.on_demand_available as "onDemandAvailable",
+      p.minimum_notice_minutes as "minimumNoticeMinutes",
+      COALESCE(
+        (
+          SELECT json_agg(json_build_object('serviceType', ps.service_type) ORDER BY ps.service_type)
+          FROM provider_services ps
+          WHERE ps.provider_profile_id = p.id
+        ),
+        '[]'
+      ) as services,
+      COALESCE(
+        (
+          SELECT json_agg(
+            json_build_object(
+              'dayOfWeek', paw.day_of_week,
+              'startTime', to_char(paw.start_time, 'HH24:MI'),
+              'endTime', to_char(paw.end_time, 'HH24:MI')
+            )
+            ORDER BY paw.day_of_week, paw.start_time
+          )
+          FROM provider_availability_windows paw
+          WHERE paw.provider_profile_id = p.id
+        ),
+        '[]'
+      ) as "availabilityWindows"
+    FROM provider_profiles p
+    WHERE p.status = 'active'
+      AND (${targetProviderId} = 0 OR p.id = ${targetProviderId})
+      AND EXISTS (
+        SELECT 1
+        FROM provider_services ps
+        WHERE ps.provider_profile_id = p.id AND ps.service_type = ${input.serviceType}
+      )
+    ORDER BY p.updated_at DESC
+  `;
+
+  return (rows as Array<Record<string, unknown>>).map((row) => toRequestMatchCandidate(row));
 }
 
 export async function getActiveRequestProviderTarget(providerId: number) {
@@ -132,55 +273,103 @@ export async function createServiceRequest(
   input: ServiceRequestInput,
   location: LocationInput,
 ) {
-  const sql = getSql();
+  const candidates = await getRequestMatchCandidates(input);
+  const matches = findRequestProviderMatches(candidates, {
+    serviceType: input.serviceType,
+    location,
+    requestedDate: input.requestedDate,
+    windowStartTime: input.windowStartTime,
+    windowEndTime: input.windowEndTime,
+    durationMinutes: input.durationMinutes,
+    targetProviderId: input.matchPreference === "specific" ? input.providerProfileId : null,
+  }) as RequestProviderMatchInput[];
+  const pool = getPool();
+  const client = await pool.connect();
+  let didBegin = false;
 
   await ensureServiceRequestTables();
-  const rows = await sql`
-    INSERT INTO service_requests (
-      requester_user_id,
-      provider_profile_id,
-      match_preference,
-      service_type,
-      zip_code,
-      latitude,
-      longitude,
-      requested_date,
-      window_start_time,
-      window_end_time,
-      duration_minutes,
-      urgency,
-      notes,
-      contact_name,
-      contact_email,
-      contact_phone,
-      status,
-      updated_at
-    )
-    VALUES (
-      ${requesterUserId},
-      ${input.providerProfileId},
-      ${input.matchPreference},
-      ${input.serviceType},
-      ${input.zipCode},
-      ${location?.latitude ?? null},
-      ${location?.longitude ?? null},
-      ${input.requestedDate},
-      ${input.windowStartTime},
-      ${input.windowEndTime},
-      ${input.durationMinutes},
-      ${input.urgency},
-      ${input.notes || null},
-      ${input.contactName},
-      ${input.contactEmail},
-      ${input.contactPhone},
-      'submitted',
-      now()
-    )
-    RETURNING id
-  `;
 
-  const records = rows as Array<Record<string, unknown>>;
-  return Number(records[0].id);
+  try {
+    await client.query("BEGIN");
+    didBegin = true;
+    const result = await client.query(
+      `
+        INSERT INTO service_requests (
+          requester_user_id,
+          provider_profile_id,
+          match_preference,
+          service_type,
+          zip_code,
+          latitude,
+          longitude,
+          requested_date,
+          window_start_time,
+          window_end_time,
+          duration_minutes,
+          urgency,
+          notes,
+          contact_name,
+          contact_email,
+          contact_phone,
+          status,
+          updated_at
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10,
+          $11, $12, $13, $14, $15, $16, 'submitted', now()
+        )
+        RETURNING id
+      `,
+      [
+        requesterUserId,
+        input.providerProfileId,
+        input.matchPreference,
+        input.serviceType,
+        input.zipCode,
+        location?.latitude ?? null,
+        location?.longitude ?? null,
+        input.requestedDate,
+        input.windowStartTime,
+        input.windowEndTime,
+        input.durationMinutes,
+        input.urgency,
+        input.notes || null,
+        input.contactName,
+        input.contactEmail,
+        input.contactPhone,
+      ],
+    );
+    const requestId = Number(result.rows[0].id);
+
+    for (const match of matches) {
+      await client.query(
+        `
+          INSERT INTO request_provider_matches (
+            service_request_id,
+            provider_profile_id,
+            status,
+            match_source,
+            distance_miles,
+            updated_at
+          )
+          VALUES ($1, $2, 'pending', $3, $4, now())
+          ON CONFLICT (service_request_id, provider_profile_id) DO NOTHING
+        `,
+        [requestId, match.providerProfileId, match.matchSource, match.distanceMiles],
+      );
+    }
+
+    await client.query("COMMIT");
+    didBegin = false;
+    return requestId;
+  } catch (error) {
+    if (didBegin) {
+      await client.query("ROLLBACK");
+    }
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function getServiceRequestForRequester(requestId: number, requesterUserId: string) {
@@ -213,5 +402,27 @@ export async function getServiceRequestForRequester(requestId: number, requester
   `;
 
   const records = rows as Array<Record<string, unknown>>;
-  return records[0] ? toServiceRequestRecord(records[0]) : null;
+  if (!records[0]) return null;
+
+  const matchRows = await sql`
+    SELECT
+      rpm.id,
+      rpm.provider_profile_id as "providerProfileId",
+      p.display_name as "providerDisplayName",
+      p.hourly_rate_cents as "hourlyRateCents",
+      rpm.status,
+      rpm.match_source as "matchSource",
+      rpm.distance_miles as "distanceMiles"
+    FROM request_provider_matches rpm
+    JOIN service_requests sr ON sr.id = rpm.service_request_id
+    JOIN provider_profiles p ON p.id = rpm.provider_profile_id
+    WHERE rpm.service_request_id = ${requestId}
+      AND sr.requester_user_id = ${requesterUserId}
+    ORDER BY rpm.distance_miles ASC NULLS LAST, rpm.created_at ASC
+  `;
+  const matches = (matchRows as Array<Record<string, unknown>>).map((row) =>
+    toRequestProviderMatchRecord(row),
+  );
+
+  return toServiceRequestRecord(records[0], matches);
 }
