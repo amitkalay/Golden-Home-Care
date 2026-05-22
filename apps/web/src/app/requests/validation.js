@@ -1,7 +1,6 @@
 import { providerServiceValues } from "../provider/services.js";
 
 export const requestMatchPreferenceOptions = [
-  { value: "any", label: "Any matching provider" },
   { value: "specific", label: "This provider" },
 ];
 
@@ -71,14 +70,29 @@ export function getTodayDateString(timeZone = "America/Los_Angeles") {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-export function parseServiceRequestForm(input, { today = getTodayDateString() } = {}) {
+function getCurrentLocalMinutes(now = new Date(), timeZone = "America/Los_Angeles") {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(now);
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+  return Number.parseInt(values.hour, 10) * 60 + Number.parseInt(values.minute, 10);
+}
+
+export function parseServiceRequestForm(
+  input,
+  { today = getTodayDateString(), now = new Date(), timeZone = "America/Los_Angeles" } = {},
+) {
   const providerProfileIdInput = getValue(input, "providerProfileId");
   const providerProfileId = providerProfileIdInput ? Number.parseInt(providerProfileIdInput, 10) : null;
   const durationMinutes = Number.parseInt(getValue(input, "durationMinutes"), 10);
-  const matchPreference = getValue(input, "matchPreference") || "any";
+  const matchPreference = getValue(input, "matchPreference") || "specific";
   const data = {
     matchPreference,
-    providerProfileId: matchPreference === "specific" ? providerProfileId : null,
+    providerProfileId,
     serviceType: getValue(input, "serviceType"),
     zipCode: getValue(input, "zipCode"),
     requestedDate: getValue(input, "requestedDate"),
@@ -97,10 +111,7 @@ export function parseServiceRequestForm(input, { today = getTodayDateString() } 
     errors.matchPreference = "Select who should receive this request";
   }
 
-  if (
-    data.matchPreference === "specific" &&
-    (!Number.isInteger(data.providerProfileId) || data.providerProfileId <= 0)
-  ) {
+  if (!Number.isInteger(data.providerProfileId) || data.providerProfileId <= 0) {
     errors.providerProfileId = "Select a provider";
   }
 
@@ -124,6 +135,8 @@ export function parseServiceRequestForm(input, { today = getTodayDateString() } 
     errors.timeWindow = "Enter a valid start and end time";
   } else if (startMinutes >= endMinutes) {
     errors.timeWindow = "End time must be after start time";
+  } else if (data.requestedDate === today && startMinutes <= getCurrentLocalMinutes(now, timeZone)) {
+    errors.timeWindow = "Start time must be in the future";
   }
 
   if (!DURATION_VALUES.has(data.durationMinutes)) {

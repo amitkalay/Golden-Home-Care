@@ -80,6 +80,7 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
   if (!request) {
     notFound();
   }
+  const hasMatches = request.matches.length > 0;
 
   return (
     <main className="provider-shell request-shell">
@@ -99,7 +100,9 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
         <p>
           {request.booking?.status === "confirmed"
             ? "A provider accepted this request and your booking is confirmed."
-            : "Your request has been saved and matched with eligible providers."}
+            : hasMatches
+              ? "Your request has been saved and sent to the selected provider."
+              : "Your request was saved, but no eligible provider matched the selected time."}
         </p>
       </section>
 
@@ -192,7 +195,7 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
                 ))}
               </ul>
             ) : (
-              <p>No active providers matched this request yet. The request is still submitted.</p>
+              <p>No eligible provider matched this request time.</p>
             )}
           </div>
         </section>
@@ -204,7 +207,7 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
           <Link className="button button-primary" href="/providers">
             Find more providers
           </Link>
-          <Link className="button button-outline" href="/requests/new">
+          <Link className="button button-outline" href="/providers">
             Submit another request
           </Link>
         </div>
