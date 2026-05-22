@@ -4,6 +4,13 @@ import { findRequestProviderMatches } from "./matching.js";
 
 export type ServiceRequestStatus = "submitted" | "confirmed" | "completed" | "canceled";
 
+export class UnavailableProviderMatchError extends Error {
+  constructor() {
+    super("Selected provider is unavailable for this request");
+    this.name = "UnavailableProviderMatchError";
+  }
+}
+
 export type RequestProviderTarget = {
   id: number;
   displayName: string | null;
@@ -389,6 +396,10 @@ export async function createServiceRequest(
     durationMinutes: input.durationMinutes,
     targetProviderId: input.matchPreference === "specific" ? input.providerProfileId : null,
   }) as RequestProviderMatchInput[];
+  if (input.matchPreference === "specific" && matches.length === 0) {
+    throw new UnavailableProviderMatchError();
+  }
+
   const pool = getPool();
   const client = await pool.connect();
   let didBegin = false;

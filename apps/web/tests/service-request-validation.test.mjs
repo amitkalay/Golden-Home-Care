@@ -42,14 +42,15 @@ describe("service request validation", () => {
     assert.equal(result.data.durationMinutes, 60);
   });
 
-  it("allows any matching provider without a provider id", () => {
+  it("requires a specific provider for new requests", () => {
     const result = parseServiceRequestForm(
       validRequestForm({ matchPreference: "any", providerProfileId: "" }),
       { today: "2026-05-20" },
     );
 
-    assert.equal(result.ok, true);
-    assert.equal(result.data.providerProfileId, null);
+    assert.equal(result.ok, false);
+    assert.equal(result.errors.matchPreference, "Select who should receive this request");
+    assert.equal(result.errors.providerProfileId, "Select a provider");
   });
 
   it("rejects invalid service, ZIP, contact fields, urgency, and notes length", () => {
@@ -115,5 +116,21 @@ describe("service request validation", () => {
 
   it("formats today's date as an ISO date string", () => {
     assert.match(getTodayDateString(), /^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("rejects same-day past start times and accepts same-day future starts", () => {
+    const now = new Date("2026-05-21T17:00:00Z");
+    const pastStart = parseServiceRequestForm(
+      validRequestForm({ requestedDate: "2026-05-21", windowStartTime: "09:00", windowEndTime: "12:00" }),
+      { today: "2026-05-21", now, timeZone: "America/Los_Angeles" },
+    );
+    assert.equal(pastStart.ok, false);
+    assert.equal(pastStart.errors.timeWindow, "Start time must be in the future");
+
+    const futureStart = parseServiceRequestForm(
+      validRequestForm({ requestedDate: "2026-05-21", windowStartTime: "11:00", windowEndTime: "12:00" }),
+      { today: "2026-05-21", now, timeZone: "America/Los_Angeles" },
+    );
+    assert.equal(futureStart.ok, true);
   });
 });

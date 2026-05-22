@@ -22,17 +22,15 @@ function buildRequestHref({
   providerId,
   service,
   zip,
-  matchPreference = "any",
 }: {
-  providerId?: number;
+  providerId: number;
   service?: string;
   zip?: string | null;
-  matchPreference?: "any" | "specific";
 }) {
   const params = new URLSearchParams();
 
-  params.set("matchPreference", matchPreference);
-  if (providerId) params.set("providerId", String(providerId));
+  params.set("matchPreference", "specific");
+  params.set("providerId", String(providerId));
   if (service) params.set("service", service);
   if (zip) params.set("zip", zip);
 
@@ -92,19 +90,6 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
           Search
         </button>
       </form>
-      <section className="provider-request-cta">
-        <div>
-          <h2>Need help from whoever is available?</h2>
-          <p>Submit one request with your service, ZIP code, timing, and contact details.</p>
-        </div>
-        <Link
-          className="button button-primary"
-          href={buildRequestHref({ service, zip, matchPreference: "any" })}
-        >
-          <CalendarClock size={18} />
-          Request service
-        </Link>
-      </section>
       {invalidZip ? (
         <p className="form-alert error" role="alert">
           Enter a valid 5-digit US ZIP code to search by coverage area.
@@ -126,7 +111,6 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
               providerId: provider.id,
               service: selectedService,
               zip: zip ?? provider.zipCode,
-              matchPreference: "specific",
             });
 
             return (
