@@ -1252,6 +1252,7 @@ textarea {
 }
 
 .hero h1,
+.feedback-page-header h1,
 .how-section h2,
 .support-section h2,
 .safety-section h2,
@@ -1777,6 +1778,103 @@ textarea {
   color: var(--gold);
 }
 
+.feedback-page {
+  display: grid;
+  gap: 18px;
+  min-height: 100vh;
+  padding: 28px;
+  background:
+    linear-gradient(180deg, rgba(255, 253, 248, 0.96), rgba(237, 246, 238, 0.72)),
+    #fffef9;
+}
+
+.feedback-page-brand,
+.feedback-page-header,
+.feedback-page-form {
+  width: min(100%, 760px);
+  margin: 0 auto;
+}
+
+.feedback-page-brand {
+  justify-content: center;
+}
+
+.feedback-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 6px;
+  text-align: center;
+}
+
+.feedback-page-header > span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--gold);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.feedback-page-header svg {
+  color: var(--deep);
+}
+
+.feedback-page-header h1 {
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.12;
+}
+
+.feedback-page-header p {
+  max-width: 590px;
+  margin: 0 auto;
+  color: #39433d;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+.feedback-form {
+  position: relative;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+}
+
+.feedback-form label span {
+  color: #69716b;
+  font-weight: 500;
+}
+
+.feedback-form textarea {
+  min-height: 136px;
+}
+
+.feedback-file-label input[type="file"] {
+  min-height: 44px;
+  padding: 10px 12px;
+  color: #39433d;
+}
+
+.feedback-file-label small {
+  color: #69716b;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.feedback-honeypot {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+.feedback-submit-button {
+  grid-column: 1 / -1;
+  min-height: 46px;
+  gap: 8px;
+}
+
 .cta-band {
   position: relative;
   display: grid;
@@ -2022,6 +2120,30 @@ textarea {
   .service-grid,
   .safety-grid {
     grid-template-columns: 1fr;
+  }
+
+  .feedback-form {
+    grid-template-columns: 1fr;
+  }
+
+  .feedback-page {
+    padding: 22px 18px;
+  }
+
+  .feedback-page-brand {
+    justify-content: start;
+  }
+
+  .feedback-page-header {
+    text-align: left;
+  }
+
+  .feedback-page-header > span {
+    justify-content: start;
+  }
+
+  .feedback-page-header h1 {
+    font-size: 30px;
   }
 
   .form-card {
