@@ -88,11 +88,9 @@ export default async function HomePage() {
           <span>Golden Home Care</span>
         </Link>
         <nav className="nav-links" aria-label="Primary navigation">
-          <a href="#how">How It Works</a>
           <a href="#services">Services</a>
           <a href="#safety">Safety</a>
           <a href={providerHref}>For Providers</a>
-          <a href="#faq">FAQ</a>
         </nav>
         <div className="nav-account" aria-label="Account">
           {session?.user?.id ? (
@@ -253,15 +251,14 @@ export default async function HomePage() {
           </Link>
         </div>
         <div className="footer-links">
-          <a href="#how">How It Works</a>
           <a href="#services">Services</a>
         </div>
         <div className="footer-links">
           <a href={providerHref}>For Providers</a>
-          <a href="#faq">FAQ</a>
         </div>
         <div className="footer-links">
           <a href="#about">About Us</a>
+          <Link href="/feedback">Got Feedback</Link>
         </div>
         <div className="socials" aria-label="Social links">
           <p>© 2026 Golden Home Care, Inc. All rights reserved.</p>

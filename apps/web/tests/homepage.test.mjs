@@ -47,6 +47,12 @@ describe("homepage", () => {
     assert.match(homepage, /Book recurring visits and receive updates/);
     assert.match(homepage, /Simple support for independent living/);
     assert.match(homepage, /Built on trust and safety/);
+    assert.equal(homepage.includes("feedback-section"), false);
+    assert.equal(homepage.includes("action={sendFeedback}"), false);
+    assert.equal(homepage.includes('name="images"'), false);
+    assert.equal(homepage.includes("getFeedbackAlert"), false);
+    assert.match(homepage, /href="\/feedback"/);
+    assert.match(homepage, /Got Feedback/);
     assert.match(homepage, /Help your parent stay independent with trusted support nearby/);
     assert.equal(providerServices.includes("Gardening"), false);
     assert.equal(providerServices.includes("Arts & Crafts"), false);
