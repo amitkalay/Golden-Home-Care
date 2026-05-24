@@ -9,4 +9,11 @@ describe("next image configuration", () => {
     assert.ok(config.includes('hostname: "*.public.blob.vercel-storage.com"'));
     assert.ok(config.includes('hostname: "lh3.googleusercontent.com"'));
   });
+
+  it("allows profile photo server actions up to the app upload limit", async () => {
+    const config = await readFile(new URL("../next.config.ts", import.meta.url), "utf8");
+
+    assert.match(config, /serverActions:\s*{/);
+    assert.match(config, /bodySizeLimit:\s*"4\.5mb"/);
+  });
 });
