@@ -111,6 +111,11 @@ function countForTab(requests: ServiceRequestRecord[], tab: RequestTab) {
 function RequestCard({ request }: { request: ServiceRequestRecord }) {
   const status = getRequestRollupStatus(request);
   const canCancel = status !== "completed" && status !== "canceled";
+  const messageUnreadCount = request.matches.reduce(
+    (count, match) => count + match.messageUnreadCount,
+    0,
+  );
+  const messageMatch = request.matches.find((match) => match.messageUnreadCount > 0) ?? request.matches[0];
 
   return (
     <article className="provider-inbox-card">
@@ -155,7 +160,10 @@ function RequestCard({ request }: { request: ServiceRequestRecord }) {
           <dt>
             <MessageCircle size={16} /> Responses
           </dt>
-          <dd>{request.matches.length} provider matches</dd>
+          <dd>
+            {request.matches.length} provider matches
+            {messageUnreadCount ? ` | ${messageUnreadCount} unread messages` : ""}
+          </dd>
         </div>
       </dl>
 
@@ -194,6 +202,12 @@ function RequestCard({ request }: { request: ServiceRequestRecord }) {
         <Link className="button button-outline" href={`/requests/${request.id}`}>
           View details
         </Link>
+        {messageMatch ? (
+          <Link className="button button-outline" href={`/requests/${request.id}#message-thread-${messageMatch.id}`}>
+            Messages
+            {messageUnreadCount ? ` (${messageUnreadCount})` : ""}
+          </Link>
+        ) : null}
         {canCancel ? (
           <form action={cancelServiceRequest}>
             <input name="requestId" type="hidden" value={request.id} />

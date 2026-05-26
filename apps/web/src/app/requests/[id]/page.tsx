@@ -2,6 +2,8 @@ import Link from "next/link";
 import { CalendarCheck2, Clock, Home, MapPin, MessageCircle, UserRound } from "lucide-react";
 import { notFound } from "next/navigation";
 import { requireUser } from "../../lib/auth";
+import { MessageThread } from "../../messages/message-thread";
+import { getMessageThreadBundlesForMatchesForUser } from "../../messages/db";
 import { getServiceRequestForRequester } from "../db";
 
 export const dynamic = "force-dynamic";
@@ -81,6 +83,13 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
     notFound();
   }
   const hasMatches = request.matches.length > 0;
+  const threadBundles = await getMessageThreadBundlesForMatchesForUser(
+    request.matches.map((match) => match.id),
+    user.id,
+  );
+  const threadBundlesByMatchId = new Map(
+    threadBundles.map((bundle) => [bundle.thread.requestProviderMatchId, bundle]),
+  );
 
   return (
     <main className="provider-shell request-shell">
@@ -173,26 +182,44 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
             </h2>
             {request.matches.length ? (
               <ul className="request-match-list">
-                {request.matches.map((match) => (
-                  <li key={match.id}>
-                    <strong>{match.providerDisplayName || `Provider #${match.providerProfileId}`}</strong>
-                    <span>
-                      {formatRate(match.hourlyRateCents)} · {formatDistance(match.distanceMiles)} ·{" "}
-                      {match.matchSource === "on_demand" ? "On-demand" : "Weekly availability"} ·{" "}
-                      {formatMatchStatus(match.status)}
-                    </span>
-                    {match.status === "proposed" &&
-                    match.proposedDate &&
-                    match.proposedStartTime &&
-                    match.proposedEndTime ? (
+                {request.matches.map((match) => {
+                  const threadBundle = threadBundlesByMatchId.get(match.id);
+
+                  return (
+                    <li key={match.id}>
+                      <strong>{match.providerDisplayName || `Provider #${match.providerProfileId}`}</strong>
                       <span>
-                        Proposed: {formatDate(match.proposedDate)} from{" "}
-                        {formatTime(match.proposedStartTime)} to {formatTime(match.proposedEndTime)}
+                        {formatRate(match.hourlyRateCents)} · {formatDistance(match.distanceMiles)} ·{" "}
+                        {match.matchSource === "on_demand" ? "On-demand" : "Weekly availability"} ·{" "}
+                        {formatMatchStatus(match.status)}
                       </span>
-                    ) : null}
-                    {match.providerResponseNote ? <span>{match.providerResponseNote}</span> : null}
-                  </li>
-                ))}
+                      {match.status === "proposed" &&
+                      match.proposedDate &&
+                      match.proposedStartTime &&
+                      match.proposedEndTime ? (
+                        <span>
+                          Proposed: {formatDate(match.proposedDate)} from{" "}
+                          {formatTime(match.proposedStartTime)} to {formatTime(match.proposedEndTime)}
+                        </span>
+                      ) : null}
+                      {match.providerResponseNote ? <span>{match.providerResponseNote}</span> : null}
+                      {match.messageUnreadCount ? (
+                        <span className="provider-status-badge status-proposed">
+                          {match.messageUnreadCount} unread messages
+                        </span>
+                      ) : null}
+                      {threadBundle ? (
+                        <div className="request-match-message" id={`message-thread-${match.id}`}>
+                          <MessageThread
+                            currentUserId={user.id}
+                            initialMessages={threadBundle.messages}
+                            thread={threadBundle.thread}
+                          />
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               <p>No eligible provider matched this request time.</p>

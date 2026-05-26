@@ -6,6 +6,7 @@ let authTablesReady: Promise<void> | null = null;
 let providerTablesReady: Promise<void> | null = null;
 let serviceRequestTablesReady: Promise<void> | null = null;
 let notificationTablesReady: Promise<void> | null = null;
+let messagingTablesReady: Promise<void> | null = null;
 
 export function getDatabaseUrl() {
   const databaseUrl = process.env.DATABASE_URL;
@@ -127,6 +128,14 @@ export async function ensureNotificationTables() {
   }
 
   return notificationTablesReady;
+}
+
+export async function ensureMessagingTables() {
+  if (!messagingTablesReady) {
+    messagingTablesReady = createMessagingTables();
+  }
+
+  return messagingTablesReady;
 }
 
 async function createProviderTables() {
@@ -420,5 +429,73 @@ async function createNotificationTables() {
   await sql`
     CREATE INDEX IF NOT EXISTS notifications_request_idx
     ON notifications(service_request_id)
+  `;
+}
+
+async function createMessagingTables() {
+  const sql = getSql();
+
+  await ensureServiceRequestTables();
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS message_threads (
+      id bigint generated always as identity primary key,
+      service_request_id bigint not null references service_requests(id) on delete cascade,
+      request_provider_match_id bigint not null unique references request_provider_matches(id) on delete cascade,
+      requester_user_id text not null references users(id) on delete cascade,
+      provider_user_id text not null references users(id) on delete cascade,
+      requester_read_at timestamptz,
+      provider_read_at timestamptz,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `;
+
+  await sql`ALTER TABLE message_threads ADD COLUMN IF NOT EXISTS requester_read_at timestamptz`;
+  await sql`ALTER TABLE message_threads ADD COLUMN IF NOT EXISTS provider_read_at timestamptz`;
+  await sql`ALTER TABLE message_threads ADD COLUMN IF NOT EXISTS created_at timestamptz not null default now()`;
+  await sql`ALTER TABLE message_threads ADD COLUMN IF NOT EXISTS updated_at timestamptz not null default now()`;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS messages (
+      id bigint generated always as identity primary key,
+      message_thread_id bigint not null references message_threads(id) on delete cascade,
+      sender_user_id text not null references users(id) on delete cascade,
+      body text not null,
+      created_at timestamptz not null default now(),
+      constraint messages_body_check check (length(btrim(body)) > 0 and char_length(body) <= 1000)
+    )
+  `;
+
+  await sql`ALTER TABLE messages ADD COLUMN IF NOT EXISTS created_at timestamptz not null default now()`;
+  await sql`ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_body_check`;
+  await sql`
+    ALTER TABLE messages
+    ADD CONSTRAINT messages_body_check check (length(btrim(body)) > 0 and char_length(body) <= 1000)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS message_threads_requester_idx
+    ON message_threads(requester_user_id, updated_at DESC)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS message_threads_provider_idx
+    ON message_threads(provider_user_id, updated_at DESC)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS message_threads_request_idx
+    ON message_threads(service_request_id)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS messages_thread_created_idx
+    ON messages(message_thread_id, created_at ASC, id ASC)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS messages_sender_idx
+    ON messages(sender_user_id)
   `;
 }

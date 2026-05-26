@@ -8,8 +8,9 @@ describe("provider request inbox source checks", () => {
     const db = await readFile(new URL("../src/app/provider/db.ts", import.meta.url), "utf8");
 
     assert.match(page, /getServerSession\(authOptions\)/);
-    assert.match(page, /ensureDraftProviderProfile\(session\.user\.id, session\.user\.name\)/);
-    assert.match(page, /getProviderRequestInbox\(session\.user\.id\)/);
+    assert.match(page, /const userId = session\.user\.id/);
+    assert.match(page, /ensureDraftProviderProfile\(userId, session\.user\.name\)/);
+    assert.match(page, /getProviderRequestInbox\(userId\)/);
     assert.match(page, /acceptProviderRequestMatch/);
     assert.match(page, /declineProviderRequestMatch/);
     assert.match(page, /proposeProviderRequestTime/);

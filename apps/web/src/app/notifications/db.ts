@@ -89,6 +89,12 @@ function formatRequestWindow(row: Record<string, unknown>) {
   )}`;
 }
 
+function formatMessagePreview(body: string) {
+  const normalized = body.replace(/\s+/g, " ").trim();
+
+  return normalized.length > 140 ? `${normalized.slice(0, 137)}...` : normalized;
+}
+
 function escapeHtml(value: string) {
   return value
     .replaceAll("&", "&amp;")
@@ -318,6 +324,59 @@ export async function markAllNotificationsReadForUser(userId: string) {
     UPDATE notifications
     SET read_at = COALESCE(read_at, now()), updated_at = now()
     WHERE recipient_user_id = ${userId}
+      AND read_at IS NULL
+  `;
+}
+
+export async function notifyRecipientOfMessage({
+  messageId,
+  recipientUserId,
+  senderName,
+  body,
+  href,
+  serviceRequestId,
+  requestProviderMatchId,
+}: {
+  messageId: number;
+  recipientUserId: string;
+  senderName: string;
+  body: string;
+  href: string;
+  serviceRequestId: number;
+  requestProviderMatchId: number;
+}) {
+  return createNotification({
+    recipientUserId,
+    type: "message_received",
+    title: `${senderName} sent a message`,
+    body: formatMessagePreview(body),
+    href,
+    serviceRequestId,
+    requestProviderMatchId,
+    dedupeKey: `message:${messageId}:recipient`,
+    sendEmail: false,
+  });
+}
+
+export async function markMessageNotificationsReadForUser({
+  userId,
+  serviceRequestId,
+  requestProviderMatchId,
+}: {
+  userId: string;
+  serviceRequestId: number;
+  requestProviderMatchId: number;
+}) {
+  const sql = getSql();
+
+  await ensureNotificationTables();
+  await sql`
+    UPDATE notifications
+    SET read_at = COALESCE(read_at, now()), updated_at = now()
+    WHERE recipient_user_id = ${userId}
+      AND type = 'message_received'
+      AND service_request_id = ${serviceRequestId}
+      AND request_provider_match_id = ${requestProviderMatchId}
       AND read_at IS NULL
   `;
 }

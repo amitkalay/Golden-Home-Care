@@ -1,4 +1,4 @@
-import { ensureServiceRequestTables, getPool, getSql } from "../lib/database";
+import { ensureMessagingTables, ensureServiceRequestTables, getPool, getSql } from "../lib/database";
 import { providerServiceLabels } from "../provider/services.js";
 import { findRequestProviderMatches } from "./matching.js";
 
@@ -54,6 +54,8 @@ export type RequestProviderMatchRecord = {
   proposedStartTime: string | null;
   proposedEndTime: string | null;
   providerResponseNote: string | null;
+  messageThreadId: number | null;
+  messageUnreadCount: number;
 };
 
 export type ServiceBookingRecord = {
@@ -237,6 +239,8 @@ function toRequestProviderMatchRecord(row: Record<string, unknown>): RequestProv
     proposedStartTime: (row.proposedStartTime as string | null) ?? null,
     proposedEndTime: (row.proposedEndTime as string | null) ?? null,
     providerResponseNote: (row.providerResponseNote as string | null) ?? null,
+    messageThreadId: row.messageThreadId === null ? null : Number(row.messageThreadId),
+    messageUnreadCount: Number(row.messageUnreadCount ?? 0),
   };
 }
 
@@ -404,7 +408,7 @@ export async function createServiceRequest(
   const client = await pool.connect();
   let didBegin = false;
 
-  await ensureServiceRequestTables();
+  await ensureMessagingTables();
 
   try {
     await client.query("BEGIN");
@@ -459,7 +463,7 @@ export async function createServiceRequest(
     const requestId = Number(result.rows[0].id);
 
     for (const match of matches) {
-      await client.query(
+      const matchResult = await client.query(
         `
           INSERT INTO request_provider_matches (
             service_request_id,
@@ -471,9 +475,36 @@ export async function createServiceRequest(
           )
           VALUES ($1, $2, 'pending', $3, $4, now())
           ON CONFLICT (service_request_id, provider_profile_id) DO NOTHING
+          RETURNING id
         `,
         [requestId, match.providerProfileId, match.matchSource, match.distanceMiles],
       );
+      const matchId = matchResult.rows[0] ? Number(matchResult.rows[0].id) : null;
+
+      if (matchId) {
+        await client.query(
+          `
+            INSERT INTO message_threads (
+              service_request_id,
+              request_provider_match_id,
+              requester_user_id,
+              provider_user_id,
+              updated_at
+            )
+            SELECT
+              sr.id,
+              $2,
+              sr.requester_user_id,
+              p.user_id,
+              now()
+            FROM service_requests sr
+            JOIN provider_profiles p ON p.id = $3
+            WHERE sr.id = $1
+            ON CONFLICT (request_provider_match_id) DO NOTHING
+          `,
+          [requestId, matchId, match.providerProfileId],
+        );
+      }
     }
 
     await client.query("COMMIT");
@@ -494,6 +525,7 @@ async function getRequestMatchesForRequester(
   requesterUserId: string,
   sql: ReturnType<typeof getSql> = getSql(),
 ) {
+  await ensureMessagingTables();
   const matchRows = await sql`
     SELECT
       rpm.id,
@@ -506,10 +538,22 @@ async function getRequestMatchesForRequester(
       to_char(rpm.proposed_date, 'YYYY-MM-DD') as "proposedDate",
       to_char(rpm.proposed_start_time, 'HH24:MI') as "proposedStartTime",
       to_char(rpm.proposed_end_time, 'HH24:MI') as "proposedEndTime",
-      rpm.provider_response_note as "providerResponseNote"
+      rpm.provider_response_note as "providerResponseNote",
+      mt.id as "messageThreadId",
+      COALESCE(
+        (
+          SELECT count(*)::int
+          FROM messages m
+          WHERE m.message_thread_id = mt.id
+            AND m.sender_user_id <> ${requesterUserId}
+            AND m.created_at > COALESCE(mt.requester_read_at, '-infinity'::timestamptz)
+        ),
+        0
+      ) as "messageUnreadCount"
     FROM request_provider_matches rpm
     JOIN service_requests sr ON sr.id = rpm.service_request_id
     JOIN provider_profiles p ON p.id = rpm.provider_profile_id
+    LEFT JOIN message_threads mt ON mt.request_provider_match_id = rpm.id
     WHERE rpm.service_request_id = ${requestId}
       AND sr.requester_user_id = ${requesterUserId}
     ORDER BY
