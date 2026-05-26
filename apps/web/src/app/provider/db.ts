@@ -1,4 +1,10 @@
-import { getPool, getSql, ensureProviderTables, ensureServiceRequestTables } from "../lib/database";
+import {
+  ensureMessagingTables,
+  ensureProviderTables,
+  ensureServiceRequestTables,
+  getPool,
+  getSql,
+} from "../lib/database";
 import { geocodeZipCode } from "../lib/zip-geocode";
 import { filterProviderSearchResults } from "../providers/search.js";
 import { defaultAvailabilityTimezone, generateAvailabilitySummary } from "./profile-validation.js";
@@ -85,6 +91,8 @@ export type ProviderRequestInboxRecord = {
   providerResponseNote: string | null;
   respondedAt: Date | null;
   createdAt: Date | null;
+  messageThreadId: number | null;
+  messageUnreadCount: number;
 };
 
 type ProviderProposalInput = {
@@ -203,6 +211,8 @@ function toProviderRequestInboxRecord(row: Record<string, unknown>): ProviderReq
     providerResponseNote: (row.providerResponseNote as string | null) ?? null,
     respondedAt: (row.respondedAt as Date | null) ?? null,
     createdAt: (row.createdAt as Date | null) ?? null,
+    messageThreadId: row.messageThreadId === null ? null : Number(row.messageThreadId),
+    messageUnreadCount: Number(row.messageUnreadCount ?? 0),
   };
 }
 
@@ -397,7 +407,7 @@ export async function saveProviderAvailability(userId: string, input: ProviderAv
 export async function getProviderRequestInbox(userId: string) {
   const sql = getSql();
 
-  await ensureServiceRequestTables();
+  await ensureMessagingTables();
   const rows = await sql`
     SELECT
       rpm.id as "matchId",
@@ -421,10 +431,22 @@ export async function getProviderRequestInbox(userId: string) {
       to_char(rpm.proposed_end_time, 'HH24:MI') as "proposedEndTime",
       rpm.provider_response_note as "providerResponseNote",
       rpm.responded_at as "respondedAt",
-      rpm.created_at as "createdAt"
+      rpm.created_at as "createdAt",
+      mt.id as "messageThreadId",
+      COALESCE(
+        (
+          SELECT count(*)::int
+          FROM messages m
+          WHERE m.message_thread_id = mt.id
+            AND m.sender_user_id <> ${userId}
+            AND m.created_at > COALESCE(mt.provider_read_at, '-infinity'::timestamptz)
+        ),
+        0
+      ) as "messageUnreadCount"
     FROM request_provider_matches rpm
     JOIN provider_profiles p ON p.id = rpm.provider_profile_id
     JOIN service_requests sr ON sr.id = rpm.service_request_id
+    LEFT JOIN message_threads mt ON mt.request_provider_match_id = rpm.id
     WHERE p.user_id = ${userId}
     ORDER BY
       CASE rpm.status

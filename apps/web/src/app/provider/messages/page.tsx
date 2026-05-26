@@ -2,6 +2,12 @@ import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { CalendarClock, CheckCircle2, Clock, MapPin, MessageCircle, XCircle } from "lucide-react";
 import { authOptions } from "../../lib/auth";
+import { MessageThread } from "../../messages/message-thread";
+import {
+  getMessageThreadBundlesForMatchesForUser,
+  getUnreadMessageThreadCount,
+  type MessageThreadBundle,
+} from "../../messages/db";
 import { getUnreadNotificationCount } from "../../notifications/db";
 import {
   acceptProviderRequestMatch,
@@ -106,7 +112,17 @@ function countForTab(requests: ProviderRequestInboxRecord[], tab: InboxTab) {
   return requests.filter((request) => belongsToTab(request, tab)).length;
 }
 
-function RequestCard({ request, today }: { request: ProviderRequestInboxRecord; today: string }) {
+function RequestCard({
+  currentUserId,
+  request,
+  threadBundle,
+  today,
+}: {
+  currentUserId: string;
+  request: ProviderRequestInboxRecord;
+  threadBundle: MessageThreadBundle | undefined;
+  today: string;
+}) {
   const isPending = request.matchStatus === "pending";
   const isAccepted = request.matchStatus === "accepted";
   const isProposed = request.matchStatus === "proposed";
@@ -123,6 +139,11 @@ function RequestCard({ request, today }: { request: ProviderRequestInboxRecord; 
           <p>
             Request #{request.requestId} from {request.contactName}
           </p>
+          {request.messageUnreadCount ? (
+            <span className="provider-status-badge status-proposed">
+              {request.messageUnreadCount} unread messages
+            </span>
+          ) : null}
         </div>
         <div className="provider-inbox-card-time">
           <strong>{formatDate(request.requestedDate)}</strong>
@@ -231,6 +252,16 @@ function RequestCard({ request, today }: { request: ProviderRequestInboxRecord; 
           </form>
         </div>
       ) : null}
+
+      {threadBundle ? (
+        <div id={`message-thread-${request.matchId}`}>
+          <MessageThread
+            currentUserId={currentUserId}
+            initialMessages={threadBundle.messages}
+            thread={threadBundle.thread}
+          />
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -242,12 +273,22 @@ export default async function ProviderMessagesPage({ searchParams }: ProviderMes
     redirect("/sign-in");
   }
 
-  await ensureDraftProviderProfile(session.user.id, session.user.name);
-  const [profile, requests, notificationCount] = await Promise.all([
-    getProviderProfileByUserId(session.user.id),
-    getProviderRequestInbox(session.user.id),
-    getUnreadNotificationCount(session.user.id),
+  const userId = session.user.id;
+
+  await ensureDraftProviderProfile(userId, session.user.name);
+  const [profile, requests, notificationCount, messageCount] = await Promise.all([
+    getProviderProfileByUserId(userId),
+    getProviderRequestInbox(userId),
+    getUnreadNotificationCount(userId),
+    getUnreadMessageThreadCount(userId),
   ]);
+  const threadBundles = await getMessageThreadBundlesForMatchesForUser(
+    requests.map((request) => request.matchId),
+    userId,
+  );
+  const threadBundlesByMatchId = new Map(
+    threadBundles.map((bundle) => [bundle.thread.requestProviderMatchId, bundle]),
+  );
   const params = searchParams ? await searchParams : {};
   const activeTab = getTab(getParam(params.tab));
   const statusMessage = getStatusMessage(getParam(params.status));
@@ -265,6 +306,7 @@ export default async function ProviderMessagesPage({ searchParams }: ProviderMes
       title="Incoming requests"
       copy="Review matched service requests and respond to families."
       notificationCount={notificationCount}
+      messageCount={messageCount}
     >
       {statusMessage ? (
         <p className={statusMessage.className} role={statusMessage.className.includes("error") ? "alert" : "status"}>
@@ -295,7 +337,13 @@ export default async function ProviderMessagesPage({ searchParams }: ProviderMes
       {visibleRequests.length ? (
         <section className="provider-inbox-list" aria-label={`${activeTab} requests`}>
           {visibleRequests.map((request) => (
-            <RequestCard key={request.matchId} request={request} today={today} />
+            <RequestCard
+              currentUserId={userId}
+              key={request.matchId}
+              request={request}
+              threadBundle={threadBundlesByMatchId.get(request.matchId)}
+              today={today}
+            />
           ))}
         </section>
       ) : (

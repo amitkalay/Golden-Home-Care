@@ -1,6 +1,7 @@
 import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
 import { authOptions } from "../../lib/auth";
+import { getUnreadMessageThreadCount } from "../../messages/db";
 import { getUnreadNotificationCount } from "../../notifications/db";
 import { ensureDraftProviderProfile, getProviderProfileByUserId } from "../db";
 import { ProviderProfileForm, ProviderShell } from "../ui";
@@ -21,9 +22,10 @@ export default async function ProviderProfilePage({ searchParams }: ProfilePageP
   }
 
   await ensureDraftProviderProfile(session.user.id, session.user.name);
-  const [profile, notificationCount] = await Promise.all([
+  const [profile, notificationCount, messageCount] = await Promise.all([
     getProviderProfileByUserId(session.user.id),
     getUnreadNotificationCount(session.user.id),
+    getUnreadMessageThreadCount(session.user.id),
   ]);
   const params = searchParams ? await searchParams : {};
   const status = Array.isArray(params.status) ? params.status[0] : params.status;
@@ -33,6 +35,7 @@ export default async function ProviderProfilePage({ searchParams }: ProfilePageP
       title="Provider profile"
       copy="Edit the information families see when your profile appears in search."
       notificationCount={notificationCount}
+      messageCount={messageCount}
     >
       <ProviderProfileForm profile={profile} mode="profile" status={status} />
     </ProviderShell>

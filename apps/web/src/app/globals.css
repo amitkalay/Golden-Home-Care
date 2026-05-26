@@ -491,6 +491,10 @@
   overflow-wrap: anywhere;
 }
 
+.request-match-message {
+  margin-top: 10px;
+}
+
 .request-actions {
   display: flex;
   flex-wrap: wrap;
@@ -752,6 +756,108 @@
   overflow-wrap: anywhere;
 }
 
+.message-thread {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #fffdf8;
+}
+
+.message-thread-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.message-thread-header h3 {
+  margin: 0 0 3px;
+  color: var(--deep);
+  font-size: 16px;
+}
+
+.message-thread-header p,
+.message-empty,
+.message-error {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.message-list {
+  display: grid;
+  gap: 9px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid #efe5d2;
+  border-radius: 5px;
+  background: #fbfaf5;
+}
+
+.message-bubble {
+  display: grid;
+  justify-self: start;
+  max-width: min(78%, 560px);
+  gap: 5px;
+  padding: 10px 12px;
+  border: 1px solid #d7e5d8;
+  border-radius: 8px;
+  background: #f4faf3;
+}
+
+.message-bubble.mine {
+  justify-self: end;
+  border-color: #ead89e;
+  background: #fff8e5;
+}
+
+.message-bubble p {
+  margin: 0;
+  color: var(--ink);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.message-bubble time {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.message-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.message-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--deep);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.message-form textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  padding: 10px 11px;
+  background: #fffef9;
+  color: var(--ink);
+}
+
+.message-error {
+  color: #8a2f1c;
+  font-weight: 700;
+}
+
 .provider-inbox-actions {
   display: grid;
   grid-template-columns: auto auto minmax(260px, 1fr);
@@ -1001,6 +1107,7 @@
   .provider-request-cta,
   .provider-inbox-facts,
   .provider-inbox-actions,
+  .message-form,
   .provider-proposal-form,
   .provider-profile-facts,
   .request-confirmation-grid,
@@ -1015,7 +1122,8 @@
   }
 
   .notification-toolbar,
-  .provider-inbox-card-header {
+  .provider-inbox-card-header,
+  .message-thread-header {
     align-items: flex-start;
     flex-direction: column;
   }
