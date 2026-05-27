@@ -18,10 +18,15 @@ describe("provider sign in", () => {
     );
 
     assert.match(googleButton, /"use client"/);
-    assert.match(googleButton, /callbackUrl = "\/account"/);
+    assert.match(googleButton, /callbackUrl = "\/"/);
     assert.match(googleButton, /signIn\("google", \{ callbackUrl \}\)/);
-    assert.match(signInPage, /callbackUrlParam\?\.startsWith\("\/"\)/);
+    assert.match(signInPage, /function normalizeCallbackUrl/);
+    assert.match(signInPage, /callbackUrl\.startsWith\("\/\/"\)/);
+    assert.match(signInPage, /callbackUrl === "\/provider" \? "\/" : callbackUrl/);
+    assert.match(signInPage, /const callbackUrl = normalizeCallbackUrl\(callbackUrlParam\)/);
     assert.match(signInPage, /Google sign-in could not start/);
     assert.equal(providerActions.includes("/api/auth/signin/google?callbackUrl=/provider/onboarding"), false);
+    assert.match(signInPage, /callbackUrl === "\/provider"/);
+    assert.equal(signInPage.includes('callbackUrl === "/provider/onboarding"'), false);
   });
 });

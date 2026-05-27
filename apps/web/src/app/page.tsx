@@ -112,7 +112,7 @@ export default async function HomePage() {
             </>
           ) : (
             <GoogleSignInButton
-              callbackUrl="/account"
+              callbackUrl="/"
               className="button button-primary nav-auth-button"
               label="Sign In"
             />
@@ -165,11 +165,6 @@ export default async function HomePage() {
               <strong>
                 <CheckCircle2 size={16} /> Confirmed
               </strong>
-            </aside>
-            <aside className="rate-card" aria-label="Starting provider rate">
-              <span>Starting at</span>
-              <strong>$34/hr</strong>
-              <p>Provider-set rate</p>
             </aside>
           </div>
         </div>

@@ -12,6 +12,7 @@ describe("homepage", () => {
       new URL("../src/app/provider/services.js", import.meta.url),
       "utf8",
     );
+    const globals = await readFile(new URL("../src/app/globals.css", import.meta.url), "utf8");
     const tagline =
       "Concierge senior center platform bringing premium services and entertainment to you.";
 
@@ -25,7 +26,11 @@ describe("homepage", () => {
     assert.ok(homepage.includes('href="/providers"'));
     assert.ok(homepage.includes('"/sign-in?callbackUrl=/provider/onboarding"'));
     assert.match(homepage, /Hello, \{userName\}/);
-    assert.match(homepage, /callbackUrl="\/account"/);
+    assert.match(homepage, /callbackUrl="\/"/);
+    assert.equal(homepage.includes("Starting at"), false);
+    assert.equal(homepage.includes("$34/hr"), false);
+    assert.equal(homepage.includes("rate-card"), false);
+    assert.equal(globals.includes("rate-card"), false);
     assert.equal(homepage.includes('href="#start"'), false);
     assert.equal(homepage.includes("Get started with Golden Home Care"), false);
     assert.equal(homepage.includes("SURVEY_ACKNOWLEDGEMENT"), false);

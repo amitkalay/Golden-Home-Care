@@ -1453,20 +1453,16 @@ textarea {
 
 .hero-info-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(180px, 0.58fr);
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
 }
 
-.visit-card,
-.rate-card {
+.visit-card {
   width: 100%;
   border: 1px solid rgba(229, 216, 190, 0.95);
   border-radius: var(--radius);
   background: rgba(255, 253, 248, 0.96);
   box-shadow: var(--shadow);
-}
-
-.visit-card {
   padding: 16px 18px;
 }
 
@@ -1502,34 +1498,6 @@ textarea {
   background: #dce9df;
   color: var(--deep-2);
   font-size: 14px;
-}
-
-.rate-card {
-  align-self: stretch;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  padding: 16px 18px;
-  text-align: center;
-}
-
-.rate-card span,
-.rate-card p {
-  color: #2c332f;
-  font-size: 13px;
-}
-
-.rate-card strong {
-  display: block;
-  color: var(--deep);
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 36px;
-  font-weight: 400;
-  line-height: 1.05;
-}
-
-.rate-card p {
-  margin: 8px 0 0;
 }
 
 .how-section h2,
@@ -2216,13 +2184,8 @@ textarea {
     width: 100%;
   }
 
-  .visit-card,
-  .rate-card {
+  .visit-card {
     padding: 14px 16px;
-  }
-
-  .rate-card strong {
-    font-size: 34px;
   }
 
   .service-grid,
