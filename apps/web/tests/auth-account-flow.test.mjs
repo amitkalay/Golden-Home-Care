@@ -20,7 +20,7 @@ describe("auth and account flow source checks", () => {
 
     assert.match(homepage, /getCurrentUserSession/);
     assert.match(homepage, /Hello, \{userName\}/);
-    assert.match(homepage, /callbackUrl="\/account"/);
+    assert.match(homepage, /callbackUrl="\/"/);
     assert.match(homepage, /\/sign-in\?callbackUrl=\/provider\/onboarding/);
   });
 

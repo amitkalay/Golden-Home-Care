@@ -91,6 +91,12 @@ describe("realtime request messaging source checks", () => {
       new URL("../src/app/messages/message-thread.tsx", import.meta.url),
       "utf8",
     );
+    const inboxPopover = await readFile(
+      new URL("../src/app/messages/inbox-popover.tsx", import.meta.url),
+      "utf8",
+    );
+    const messageDb = await readFile(new URL("../src/app/messages/db.ts", import.meta.url), "utf8");
+    const homepage = await readFile(new URL("../src/app/page.tsx", import.meta.url), "utf8");
     const requestPage = await readFile(new URL("../src/app/requests/[id]/page.tsx", import.meta.url), "utf8");
     const providerPage = await readFile(new URL("../src/app/provider/messages/page.tsx", import.meta.url), "utf8");
     const accountRequestsPage = await readFile(
@@ -104,6 +110,17 @@ describe("realtime request messaging source checks", () => {
     assert.match(threadComponent, /private-message-thread-\$\{thread\.id\}/);
     assert.match(threadComponent, /\/api\/messages\/send/);
     assert.match(threadComponent, /\/api\/messages\/read/);
+    assert.match(messageDb, /export async function getMessageInboxThreadBundlesForUser/);
+    assert.match(messageDb, /LEFT JOIN LATERAL/);
+    assert.match(messageDb, /ORDER BY COALESCE\(latest_message\.created_at, mt\.updated_at\) DESC/);
+    assert.match(homepage, /getMessageInboxThreadBundlesForUser\(session\.user\.id\)/);
+    assert.match(homepage, /<InboxPopover/);
+    assert.match(inboxPopover, /"use client"/);
+    assert.match(inboxPopover, /Search messages/);
+    assert.match(inboxPopover, /setFilter\("unread"\)/);
+    assert.match(inboxPopover, /function openThread\(threadId: number\)/);
+    assert.match(inboxPopover, /\/api\/messages\/read/);
+    assert.match(inboxPopover, /<MessageThread/);
     assert.match(requestPage, /getMessageThreadBundlesForMatchesForUser/);
     assert.match(requestPage, /<MessageThread/);
     assert.match(providerPage, /getMessageThreadBundlesForMatchesForUser/);

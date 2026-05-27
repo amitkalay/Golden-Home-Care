@@ -68,6 +68,19 @@ export type ServiceBookingRecord = {
   status: "confirmed" | "completed" | "canceled";
 };
 
+export type UpcomingVisitRecord = {
+  id: number;
+  serviceRequestId: number;
+  serviceLabel: string;
+  bookingDate: string;
+  startTime: string;
+  endTime: string;
+  status: "confirmed";
+  role: "requester" | "provider";
+  participantName: string;
+  endsAt: string;
+};
+
 type ServiceRequestInput = {
   providerProfileId: number | null;
   matchPreference: "any" | "specific";
@@ -255,6 +268,33 @@ function toServiceBookingRecord(row: Record<string, unknown>): ServiceBookingRec
     startTime: String(row.startTime),
     endTime: String(row.endTime),
     status,
+  };
+}
+
+function toIsoString(value: unknown) {
+  if (value instanceof Date) return value.toISOString();
+  if (typeof value === "string") return new Date(value).toISOString();
+
+  return new Date().toISOString();
+}
+
+function toUpcomingVisitRecord(row: Record<string, unknown>, userId: string): UpcomingVisitRecord {
+  const requesterUserId = String(row.requesterUserId);
+  const providerName = String(row.providerDisplayName || row.providerAccountName || "Provider");
+  const requesterName = String(row.requesterContactName || row.requesterAccountName || "Requester");
+  const role = requesterUserId === userId ? "requester" : "provider";
+
+  return {
+    id: Number(row.id),
+    serviceRequestId: Number(row.serviceRequestId),
+    serviceLabel: providerServiceLabels.get(String(row.serviceType)) ?? String(row.serviceType),
+    bookingDate: String(row.bookingDate),
+    startTime: String(row.startTime),
+    endTime: String(row.endTime),
+    status: "confirmed",
+    role,
+    participantName: role === "requester" ? providerName : requesterName,
+    endsAt: toIsoString(row.endsAt),
   };
 }
 
@@ -681,6 +721,42 @@ export async function getServiceRequestsForRequester(requesterUserId: string) {
       return toServiceRequestRecord(record, matches, booking);
     }),
   );
+}
+
+export async function getNextUpcomingVisitForUser(userId: string) {
+  const sql = getSql();
+
+  await ensureServiceRequestTables();
+  const rows = await sql`
+    SELECT
+      sb.id,
+      sb.service_request_id as "serviceRequestId",
+      sr.requester_user_id as "requesterUserId",
+      p.user_id as "providerUserId",
+      sr.service_type as "serviceType",
+      sr.contact_name as "requesterContactName",
+      requester.name as "requesterAccountName",
+      p.display_name as "providerDisplayName",
+      provider_user.name as "providerAccountName",
+      to_char(sb.booking_date, 'YYYY-MM-DD') as "bookingDate",
+      to_char(sb.start_time, 'HH24:MI') as "startTime",
+      to_char(sb.end_time, 'HH24:MI') as "endTime",
+      sb.status,
+      ((sb.booking_date + sb.end_time) AT TIME ZONE 'America/Los_Angeles') as "endsAt"
+    FROM service_bookings sb
+    JOIN service_requests sr ON sr.id = sb.service_request_id
+    JOIN provider_profiles p ON p.id = sb.provider_profile_id
+    LEFT JOIN users requester ON requester.id = sr.requester_user_id
+    LEFT JOIN users provider_user ON provider_user.id = p.user_id
+    WHERE sb.status = 'confirmed'
+      AND (sr.requester_user_id = ${userId} OR p.user_id = ${userId})
+      AND (sb.booking_date + sb.end_time) > (now() AT TIME ZONE 'America/Los_Angeles')
+    ORDER BY sb.booking_date ASC, sb.start_time ASC, sb.id ASC
+    LIMIT 1
+  `;
+  const records = rows as Array<Record<string, unknown>>;
+
+  return records[0] ? toUpcomingVisitRecord(records[0], userId) : null;
 }
 
 export async function cancelServiceRequestForRequester(

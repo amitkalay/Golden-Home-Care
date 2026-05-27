@@ -5,7 +5,7 @@ import { LogIn } from "lucide-react";
 import { signIn } from "next-auth/react";
 
 export function GoogleSignInButton({
-  callbackUrl = "/account",
+  callbackUrl = "/",
   label = "Continue with Google",
   className = "button button-primary auth-button",
 }: {

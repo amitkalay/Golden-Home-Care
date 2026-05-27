@@ -12,11 +12,19 @@ type SignInPageProps = {
   }>;
 };
 
+function normalizeCallbackUrl(callbackUrl?: string) {
+  if (!callbackUrl?.startsWith("/") || callbackUrl.startsWith("//")) {
+    return "/";
+  }
+
+  return callbackUrl === "/provider" ? "/" : callbackUrl;
+}
+
 export default async function SignInPage({ searchParams }: SignInPageProps) {
   const params = searchParams ? await searchParams : {};
   const error = Array.isArray(params.error) ? params.error[0] : params.error;
   const callbackUrlParam = Array.isArray(params.callbackUrl) ? params.callbackUrl[0] : params.callbackUrl;
-  const callbackUrl = callbackUrlParam?.startsWith("/") ? callbackUrlParam : "/account";
+  const callbackUrl = normalizeCallbackUrl(callbackUrlParam);
 
   return (
     <main className="auth-shell">
