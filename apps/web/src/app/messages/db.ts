@@ -31,6 +31,10 @@ export type MessageThreadBundle = {
   messages: MessageRecord[];
 };
 
+export type MessageInboxThreadBundle = MessageThreadBundle & {
+  latestMessage: MessageRecord | null;
+};
+
 export type MessageSendResult = {
   message: MessageRecord;
   thread: MessageThreadRecord;
@@ -244,6 +248,94 @@ export async function getMessageThreadBundlesForMatchesForUser(matchIds: number[
   );
 
   return bundles.filter((bundle): bundle is MessageThreadBundle => Boolean(bundle));
+}
+
+export async function getMessageInboxThreadBundlesForUser(userId: string) {
+  const sql = getSql();
+
+  await ensureMessagingTables();
+  const rows = await sql`
+    SELECT
+      mt.id,
+      mt.service_request_id as "serviceRequestId",
+      mt.request_provider_match_id as "requestProviderMatchId",
+      mt.requester_user_id as "requesterUserId",
+      mt.provider_user_id as "providerUserId",
+      mt.requester_read_at as "requesterReadAt",
+      mt.provider_read_at as "providerReadAt",
+      mt.updated_at as "updatedAt",
+      sr.status as "requestStatus",
+      sr.contact_name as "requesterContactName",
+      requester.name as "requesterAccountName",
+      rpm.status as "matchStatus",
+      p.display_name as "providerDisplayName",
+      provider_user.name as "providerAccountName",
+      latest_message.id as "latestMessageId",
+      latest_message.message_thread_id as "latestMessageThreadId",
+      latest_message.sender_user_id as "latestMessageSenderUserId",
+      latest_message.body as "latestMessageBody",
+      latest_message.created_at as "latestMessageCreatedAt",
+      COALESCE(
+        (
+          SELECT count(*)::int
+          FROM messages m
+          WHERE m.message_thread_id = mt.id
+            AND m.sender_user_id <> ${userId}
+            AND m.created_at > COALESCE(
+              CASE
+                WHEN mt.requester_user_id = ${userId} THEN mt.requester_read_at
+                ELSE mt.provider_read_at
+              END,
+              '-infinity'::timestamptz
+            )
+        ),
+        0
+      ) as "unreadCount"
+    FROM message_threads mt
+    JOIN service_requests sr ON sr.id = mt.service_request_id
+    JOIN request_provider_matches rpm ON rpm.id = mt.request_provider_match_id
+    JOIN provider_profiles p ON p.id = rpm.provider_profile_id
+    LEFT JOIN users requester ON requester.id = mt.requester_user_id
+    LEFT JOIN users provider_user ON provider_user.id = mt.provider_user_id
+    LEFT JOIN LATERAL (
+      SELECT
+        m.id,
+        m.message_thread_id,
+        m.sender_user_id,
+        m.body,
+        m.created_at
+      FROM messages m
+      WHERE m.message_thread_id = mt.id
+      ORDER BY m.created_at DESC, m.id DESC
+      LIMIT 1
+    ) latest_message ON true
+    WHERE ${userId} = mt.requester_user_id OR ${userId} = mt.provider_user_id
+    ORDER BY COALESCE(latest_message.created_at, mt.updated_at) DESC, mt.id DESC
+  `;
+  const records = rows as Array<Record<string, unknown>>;
+  const threads = records.map((record) => toMessageThreadRecord(record, userId));
+  const messageLists = await Promise.all(
+    threads.map((thread) => getMessagesForThreadForUser(thread.id, userId)),
+  );
+
+  return threads.map((thread, index) => {
+    const record = records[index];
+    const latestMessage = record.latestMessageId
+      ? toMessageRecord({
+          id: record.latestMessageId,
+          threadId: record.latestMessageThreadId,
+          senderUserId: record.latestMessageSenderUserId,
+          body: record.latestMessageBody,
+          createdAt: record.latestMessageCreatedAt,
+        })
+      : null;
+
+    return {
+      thread,
+      messages: messageLists[index],
+      latestMessage,
+    } satisfies MessageInboxThreadBundle;
+  });
 }
 
 export async function getUnreadMessageThreadCount(userId: string) {

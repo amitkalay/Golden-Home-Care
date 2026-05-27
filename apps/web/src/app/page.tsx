@@ -21,6 +21,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { getCurrentUserSession } from "./lib/auth";
+import { getMessageInboxThreadBundlesForUser } from "./messages/db";
+import { InboxPopover } from "./messages/inbox-popover";
 import { GoogleSignInButton } from "./sign-in/google-sign-in-button";
 import { SignOutButton } from "./sign-out-button";
 
@@ -76,6 +78,9 @@ export default async function HomePage() {
   const session = await getCurrentUserSession();
   const userName = session?.user?.name || session?.user?.email?.split("@")[0] || "there";
   const providerHref = session?.user?.id ? "/provider/onboarding" : "/sign-in?callbackUrl=/provider/onboarding";
+  const inboxThreads = session?.user?.id
+    ? await getMessageInboxThreadBundlesForUser(session.user.id)
+    : [];
 
   return (
     <main className="site-shell">
@@ -105,9 +110,7 @@ export default async function HomePage() {
                 </span>
                 <span>Hello, {userName}</span>
               </Link>
-              <Link className="nav-link-button" href="/provider">
-                Provider
-              </Link>
+              <InboxPopover currentUserId={session.user.id} initialThreads={inboxThreads} />
               <SignOutButton className="nav-link-button" />
             </>
           ) : (

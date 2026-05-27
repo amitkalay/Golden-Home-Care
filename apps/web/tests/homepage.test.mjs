@@ -12,6 +12,10 @@ describe("homepage", () => {
       new URL("../src/app/provider/services.js", import.meta.url),
       "utf8",
     );
+    const inboxPopover = await readFile(
+      new URL("../src/app/messages/inbox-popover.tsx", import.meta.url),
+      "utf8",
+    );
     const globals = await readFile(new URL("../src/app/globals.css", import.meta.url), "utf8");
     const tagline =
       "Concierge senior center platform bringing premium services and entertainment to you.";
@@ -27,6 +31,12 @@ describe("homepage", () => {
     assert.ok(homepage.includes('"/sign-in?callbackUrl=/provider/onboarding"'));
     assert.match(homepage, /Hello, \{userName\}/);
     assert.match(homepage, /callbackUrl="\/"/);
+    assert.match(homepage, /getMessageInboxThreadBundlesForUser/);
+    assert.match(homepage, /<InboxPopover currentUserId=\{session\.user\.id\} initialThreads=\{inboxThreads\} \/>/);
+    assert.equal(homepage.includes('<Link className="nav-link-button" href="/provider">'), false);
+    assert.match(inboxPopover, /Inbox/);
+    assert.match(inboxPopover, /aria-haspopup="dialog"/);
+    assert.match(inboxPopover, /\/api\/messages\/read/);
     assert.equal(homepage.includes("Starting at"), false);
     assert.equal(homepage.includes("$34/hr"), false);
     assert.equal(homepage.includes("rate-card"), false);
