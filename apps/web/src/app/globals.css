@@ -1812,6 +1812,7 @@ textarea {
   margin: 8px 0;
   color: #28302c;
   font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
 .visit-card strong {
@@ -1824,6 +1825,11 @@ textarea {
   background: #dce9df;
   color: var(--deep-2);
   font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.visit-card svg {
+  flex: 0 0 auto;
 }
 
 .how-section h2,

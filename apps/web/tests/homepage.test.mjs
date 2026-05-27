@@ -16,6 +16,10 @@ describe("homepage", () => {
       new URL("../src/app/messages/inbox-popover.tsx", import.meta.url),
       "utf8",
     );
+    const upcomingVisitCard = await readFile(
+      new URL("../src/app/upcoming-visit-card.tsx", import.meta.url),
+      "utf8",
+    );
     const globals = await readFile(new URL("../src/app/globals.css", import.meta.url), "utf8");
     const tagline =
       "Concierge senior center platform bringing premium services and entertainment to you.";
@@ -37,6 +41,16 @@ describe("homepage", () => {
     assert.match(inboxPopover, /Inbox/);
     assert.match(inboxPopover, /aria-haspopup="dialog"/);
     assert.match(inboxPopover, /\/api\/messages\/read/);
+    assert.match(homepage, /export const dynamic = "force-dynamic"/);
+    assert.match(homepage, /getNextUpcomingVisitForUser\(session\.user\.id\)/);
+    assert.match(homepage, /<UpcomingVisitCard visit=\{upcomingVisit\} \/>/);
+    assert.equal(homepage.includes("May 22, 2026"), false);
+    assert.equal(homepage.includes("10:00 AM - 12:00 PM"), false);
+    assert.equal(homepage.includes("Sarah J."), false);
+    assert.match(upcomingVisitCard, /"use client"/);
+    assert.match(upcomingVisitCard, /No upcoming appointments/);
+    assert.match(upcomingVisitCard, /router\.refresh\(\)/);
+    assert.match(upcomingVisitCard, /window\.setTimeout/);
     assert.equal(homepage.includes("Starting at"), false);
     assert.equal(homepage.includes("$34/hr"), false);
     assert.equal(homepage.includes("rate-card"), false);

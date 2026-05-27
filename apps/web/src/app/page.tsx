@@ -3,8 +3,6 @@ import Link from "next/link";
 import {
   Bell,
   CalendarCheck2,
-  CalendarDays,
-  CheckCircle2,
   ClipboardCheck,
   DollarSign,
   Footprints,
@@ -17,14 +15,17 @@ import {
   ShieldCheck,
   ShoppingBag,
   Utensils,
-  UserRound,
   type LucideIcon,
 } from "lucide-react";
 import { getCurrentUserSession } from "./lib/auth";
 import { getMessageInboxThreadBundlesForUser } from "./messages/db";
 import { InboxPopover } from "./messages/inbox-popover";
+import { getNextUpcomingVisitForUser } from "./requests/db";
 import { GoogleSignInButton } from "./sign-in/google-sign-in-button";
 import { SignOutButton } from "./sign-out-button";
+import { UpcomingVisitCard } from "./upcoming-visit-card";
+
+export const dynamic = "force-dynamic";
 
 const services = [
   {
@@ -78,9 +79,15 @@ export default async function HomePage() {
   const session = await getCurrentUserSession();
   const userName = session?.user?.name || session?.user?.email?.split("@")[0] || "there";
   const providerHref = session?.user?.id ? "/provider/onboarding" : "/sign-in?callbackUrl=/provider/onboarding";
-  const inboxThreads = session?.user?.id
-    ? await getMessageInboxThreadBundlesForUser(session.user.id)
-    : [];
+  let inboxThreads: Awaited<ReturnType<typeof getMessageInboxThreadBundlesForUser>> = [];
+  let upcomingVisit: Awaited<ReturnType<typeof getNextUpcomingVisitForUser>> = null;
+
+  if (session?.user?.id) {
+    [inboxThreads, upcomingVisit] = await Promise.all([
+      getMessageInboxThreadBundlesForUser(session.user.id),
+      getNextUpcomingVisitForUser(session.user.id),
+    ]);
+  }
 
   return (
     <main className="site-shell">
@@ -152,23 +159,7 @@ export default async function HomePage() {
             />
           </div>
           <div className="hero-info-row">
-            <aside className="visit-card" aria-label="Upcoming visit details">
-              <h2>
-                <CalendarDays size={22} /> Upcoming visit
-              </h2>
-              <p>
-                <CalendarCheck2 size={16} /> May 22, 2026
-              </p>
-              <p>
-                <ClockIcon /> 10:00 AM - 12:00 PM
-              </p>
-              <p>
-                <UserRound size={16} /> Sarah J.
-              </p>
-              <strong>
-                <CheckCircle2 size={16} /> Confirmed
-              </strong>
-            </aside>
+            <UpcomingVisitCard visit={upcomingVisit} />
           </div>
         </div>
 
@@ -322,24 +313,5 @@ function FeatureCard({
         <p>{copy}</p>
       </div>
     </article>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg
-      aria-hidden="true"
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      strokeWidth="2"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="M12 7v5l3 2" />
-    </svg>
   );
 }

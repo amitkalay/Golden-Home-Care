@@ -55,4 +55,26 @@ describe("requester status and booking flow source checks", () => {
     assert.match(matching, /booking\.startTime < request\.windowEndTime/);
     assert.match(matching, /booking\.endTime > request\.windowStartTime/);
   });
+
+  it("loads the next non-stale confirmed visit for landing page users", async () => {
+    const requestDb = await readFile(new URL("../src/app/requests/db.ts", import.meta.url), "utf8");
+    const homepage = await readFile(new URL("../src/app/page.tsx", import.meta.url), "utf8");
+    const upcomingVisitCard = await readFile(
+      new URL("../src/app/upcoming-visit-card.tsx", import.meta.url),
+      "utf8",
+    );
+
+    assert.match(requestDb, /export type UpcomingVisitRecord/);
+    assert.match(requestDb, /export async function getNextUpcomingVisitForUser\(userId: string\)/);
+    assert.match(requestDb, /WHERE sb\.status = 'confirmed'/);
+    assert.match(requestDb, /sr\.requester_user_id = \$\{userId\} OR p\.user_id = \$\{userId\}/);
+    assert.match(requestDb, /sb\.booking_date \+ sb\.end_time\) > \(now\(\) AT TIME ZONE 'America\/Los_Angeles'\)/);
+    assert.match(requestDb, /ORDER BY sb\.booking_date ASC, sb\.start_time ASC, sb\.id ASC/);
+    assert.match(requestDb, /participantName: role === "requester" \? providerName : requesterName/);
+    assert.match(homepage, /export const dynamic = "force-dynamic"/);
+    assert.match(homepage, /getNextUpcomingVisitForUser\(session\.user\.id\)/);
+    assert.match(upcomingVisitCard, /visit\?\.endsAt/);
+    assert.match(upcomingVisitCard, /window\.setTimeout/);
+    assert.match(upcomingVisitCard, /router\.refresh\(\)/);
+  });
 });
