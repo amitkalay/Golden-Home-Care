@@ -30,28 +30,32 @@ describe("requester status and booking flow source checks", () => {
     const database = await readFile(new URL("../src/app/lib/database.ts", import.meta.url), "utf8");
 
     assert.match(database, /CREATE TABLE IF NOT EXISTS service_bookings/);
-    assert.match(database, /status in \('submitted', 'confirmed', 'completed', 'canceled'\)/);
+    assert.match(database, /status in \('submitted', 'payment_pending', 'confirmed', 'completed', 'canceled'\)/);
+    assert.match(database, /status in \('payment_pending', 'confirmed', 'completed', 'canceled'\)/);
     assert.match(database, /service_bookings_provider_time_idx/);
   });
 
-  it("provider acceptance confirms a booking and expires overlapping work", async () => {
+  it("provider acceptance creates a payment-pending booking and expires overlapping work", async () => {
     const providerDb = await readFile(new URL("../src/app/provider/db.ts", import.meta.url), "utf8");
 
     assert.match(providerDb, /FROM service_bookings/);
-    assert.match(providerDb, /status = 'confirmed'/);
+    assert.match(providerDb, /status in \('payment_pending', 'confirmed'\)/);
+    assert.match(providerDb, /status = 'payment_pending'/);
     assert.match(providerDb, /INSERT INTO service_bookings/);
+    assert.match(providerDb, /INSERT INTO service_payments/);
     assert.match(providerDb, /UPDATE service_requests/);
     assert.match(providerDb, /sr\.window_start_time < \$5/);
     assert.match(providerDb, /sr\.window_end_time > \$4/);
   });
 
-  it("request matching excludes providers with overlapping confirmed bookings", async () => {
+  it("request matching excludes providers with overlapping confirmed or payment-pending bookings", async () => {
     const requestDb = await readFile(new URL("../src/app/requests/db.ts", import.meta.url), "utf8");
     const matching = await readFile(new URL("../src/app/requests/matching.js", import.meta.url), "utf8");
 
     assert.match(requestDb, /FROM service_bookings sb/);
-    assert.match(requestDb, /sb\.status = 'confirmed'/);
+    assert.match(requestDb, /sb\.status in \('payment_pending', 'confirmed'\)/);
     assert.match(matching, /hasOverlappingConfirmedBooking/);
+    assert.match(matching, /booking\.status === "payment_pending"/);
     assert.match(matching, /booking\.startTime < request\.windowEndTime/);
     assert.match(matching, /booking\.endTime > request\.windowStartTime/);
   });

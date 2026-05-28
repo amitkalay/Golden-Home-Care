@@ -5,6 +5,7 @@ import {
   getPool,
   getSql,
 } from "../lib/database";
+import { calculateBookingCharges } from "../payments/charges.js";
 import { geocodeZipCode } from "../lib/zip-geocode";
 import { filterProviderSearchResults } from "../providers/search.js";
 import { defaultAvailabilityTimezone, generateAvailabilitySummary } from "./profile-validation.js";
@@ -38,6 +39,11 @@ export type ProviderProfileRecord = {
   availabilityWindows: ProviderAvailabilityWindowRecord[];
   transportationAvailable: boolean;
   backgroundCheckWilling: boolean;
+  stripeAccountId: string | null;
+  stripeChargesEnabled: boolean;
+  stripePayoutsEnabled: boolean;
+  stripeOnboardingComplete: boolean;
+  stripeRequirementsCurrentlyDue: string[];
   status: string;
   services: Array<{ serviceType: string; label: string }>;
 };
@@ -93,6 +99,7 @@ export type ProviderRequestInboxRecord = {
   createdAt: Date | null;
   messageThreadId: number | null;
   messageUnreadCount: number;
+  requestStatus: "submitted" | "payment_pending" | "confirmed" | "completed" | "canceled";
 };
 
 type ProviderProposalInput = {
@@ -153,6 +160,13 @@ function toRecord(row: Record<string, unknown>): ProviderProfileRecord {
     availabilityWindows: normalizedAvailabilityWindows,
     transportationAvailable: Boolean(row.transportationAvailable),
     backgroundCheckWilling: Boolean(row.backgroundCheckWilling),
+    stripeAccountId: (row.stripeAccountId as string | null) ?? null,
+    stripeChargesEnabled: Boolean(row.stripeChargesEnabled),
+    stripePayoutsEnabled: Boolean(row.stripePayoutsEnabled),
+    stripeOnboardingComplete: Boolean(row.stripeOnboardingComplete),
+    stripeRequirementsCurrentlyDue: Array.isArray(row.stripeRequirementsCurrentlyDue)
+      ? (row.stripeRequirementsCurrentlyDue as string[])
+      : [],
     status: String(row.status),
     services: services
       .filter((service): service is { serviceType: string } => {
@@ -180,6 +194,19 @@ function normalizeProviderRequestStatus(status: unknown): ProviderRequestMatchSt
   }
 
   return "pending";
+}
+
+function normalizeServiceRequestStatus(status: unknown): ProviderRequestInboxRecord["requestStatus"] {
+  if (
+    status === "payment_pending" ||
+    status === "confirmed" ||
+    status === "completed" ||
+    status === "canceled"
+  ) {
+    return status;
+  }
+
+  return "submitted";
 }
 
 function toProviderRequestInboxRecord(row: Record<string, unknown>): ProviderRequestInboxRecord {
@@ -213,6 +240,7 @@ function toProviderRequestInboxRecord(row: Record<string, unknown>): ProviderReq
     createdAt: (row.createdAt as Date | null) ?? null,
     messageThreadId: row.messageThreadId === null ? null : Number(row.messageThreadId),
     messageUnreadCount: Number(row.messageUnreadCount ?? 0),
+    requestStatus: normalizeServiceRequestStatus(row.requestStatus),
   };
 }
 
@@ -258,6 +286,11 @@ export async function getProviderProfileByUserId(userId: string) {
       p.minimum_notice_minutes as "minimumNoticeMinutes",
       p.transportation_available as "transportationAvailable",
       p.background_check_willing as "backgroundCheckWilling",
+      p.stripe_account_id as "stripeAccountId",
+      p.stripe_charges_enabled as "stripeChargesEnabled",
+      p.stripe_payouts_enabled as "stripePayoutsEnabled",
+      p.stripe_onboarding_complete as "stripeOnboardingComplete",
+      p.stripe_requirements_currently_due as "stripeRequirementsCurrentlyDue",
       p.status,
       COALESCE(
         (
@@ -412,6 +445,7 @@ export async function getProviderRequestInbox(userId: string) {
     SELECT
       rpm.id as "matchId",
       sr.id as "requestId",
+      sr.status as "requestStatus",
       rpm.status as "matchStatus",
       rpm.match_source as "matchSource",
       rpm.distance_miles as "distanceMiles",
@@ -424,8 +458,8 @@ export async function getProviderRequestInbox(userId: string) {
       sr.urgency,
       sr.notes,
       sr.contact_name as "contactName",
-      CASE WHEN rpm.status = 'accepted' THEN sr.contact_email ELSE NULL END as "contactEmail",
-      CASE WHEN rpm.status = 'accepted' THEN sr.contact_phone ELSE NULL END as "contactPhone",
+      CASE WHEN rpm.status = 'accepted' AND sr.status = 'confirmed' THEN sr.contact_email ELSE NULL END as "contactEmail",
+      CASE WHEN rpm.status = 'accepted' AND sr.status = 'confirmed' THEN sr.contact_phone ELSE NULL END as "contactPhone",
       to_char(rpm.proposed_date, 'YYYY-MM-DD') as "proposedDate",
       to_char(rpm.proposed_start_time, 'HH24:MI') as "proposedStartTime",
       to_char(rpm.proposed_end_time, 'HH24:MI') as "proposedEndTime",
@@ -480,6 +514,14 @@ export async function acceptProviderRequestMatch(userId: string, matchId: number
           rpm.id,
           rpm.service_request_id,
           rpm.provider_profile_id,
+          p.user_id as provider_user_id,
+          p.hourly_rate_cents,
+          p.stripe_account_id,
+          p.stripe_charges_enabled,
+          p.stripe_payouts_enabled,
+          p.stripe_onboarding_complete,
+          sr.requester_user_id,
+          sr.duration_minutes,
           to_char(sr.requested_date, 'YYYY-MM-DD') as booking_date,
           to_char(sr.window_start_time, 'HH24:MI') as start_time,
           to_char(sr.window_end_time, 'HH24:MI') as end_time
@@ -499,7 +541,24 @@ export async function acceptProviderRequestMatch(userId: string, matchId: number
     if (!match) {
       await client.query("ROLLBACK");
       didBegin = false;
-      return false;
+      return { updated: false as const, reason: "invalid" as const };
+    }
+
+    if (!Number.isInteger(match.hourly_rate_cents) || match.hourly_rate_cents <= 0) {
+      await client.query("ROLLBACK");
+      didBegin = false;
+      return { updated: false as const, reason: "rate_required" as const };
+    }
+
+    if (
+      !match.stripe_account_id ||
+      !match.stripe_charges_enabled ||
+      !match.stripe_payouts_enabled ||
+      !match.stripe_onboarding_complete
+    ) {
+      await client.query("ROLLBACK");
+      didBegin = false;
+      return { updated: false as const, reason: "stripe_required" as const };
     }
 
     const conflictResult = await client.query(
@@ -508,7 +567,7 @@ export async function acceptProviderRequestMatch(userId: string, matchId: number
         FROM service_bookings
         WHERE provider_profile_id = $1
           AND booking_date = $2
-          AND status = 'confirmed'
+          AND status in ('payment_pending', 'confirmed')
           AND start_time < $4
           AND end_time > $3
         LIMIT 1
@@ -519,7 +578,7 @@ export async function acceptProviderRequestMatch(userId: string, matchId: number
     if (conflictResult.rows[0]) {
       await client.query("ROLLBACK");
       didBegin = false;
-      return false;
+      return { updated: false as const, reason: "conflict" as const };
     }
 
     await client.query(
@@ -541,13 +600,13 @@ export async function acceptProviderRequestMatch(userId: string, matchId: number
     await client.query(
       `
         UPDATE service_requests
-        SET status = 'confirmed', updated_at = now()
+        SET status = 'payment_pending', updated_at = now()
         WHERE id = $1
       `,
       [match.service_request_id],
     );
 
-    await client.query(
+    const bookingResult = await client.query(
       `
         INSERT INTO service_bookings (
           service_request_id,
@@ -559,18 +618,19 @@ export async function acceptProviderRequestMatch(userId: string, matchId: number
           status,
           updated_at
         )
-        VALUES ($1, $2, $3, $4, $5, $6, 'confirmed', now())
+        VALUES ($1, $2, $3, $4, $5, $6, 'payment_pending', now())
         ON CONFLICT (service_request_id) DO UPDATE SET
           provider_profile_id = EXCLUDED.provider_profile_id,
           request_provider_match_id = EXCLUDED.request_provider_match_id,
           booking_date = EXCLUDED.booking_date,
           start_time = EXCLUDED.start_time,
           end_time = EXCLUDED.end_time,
-          status = 'confirmed',
+          status = 'payment_pending',
           canceled_at = NULL,
           canceled_by_user_id = NULL,
           cancellation_reason = NULL,
           updated_at = now()
+        RETURNING id
       `,
       [
         match.service_request_id,
@@ -579,6 +639,68 @@ export async function acceptProviderRequestMatch(userId: string, matchId: number
         match.booking_date,
         match.start_time,
         match.end_time,
+      ],
+    );
+    const bookingId = Number(bookingResult.rows[0].id);
+    const charges = calculateBookingCharges(match.hourly_rate_cents, match.duration_minutes);
+
+    await client.query(
+      `
+        INSERT INTO service_payments (
+          service_request_id,
+          service_booking_id,
+          request_provider_match_id,
+          requester_user_id,
+          provider_profile_id,
+          provider_user_id,
+          stripe_connected_account_id,
+          currency,
+          service_amount_cents,
+          platform_fee_cents,
+          sales_tax_cents,
+          total_amount_cents,
+          status,
+          updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, 'usd', $8, $9, $10, $11, 'pending', now())
+        ON CONFLICT (service_request_id) DO UPDATE SET
+          service_booking_id = EXCLUDED.service_booking_id,
+          request_provider_match_id = EXCLUDED.request_provider_match_id,
+          provider_profile_id = EXCLUDED.provider_profile_id,
+          provider_user_id = EXCLUDED.provider_user_id,
+          stripe_connected_account_id = EXCLUDED.stripe_connected_account_id,
+          service_amount_cents = EXCLUDED.service_amount_cents,
+          platform_fee_cents = EXCLUDED.platform_fee_cents,
+          sales_tax_cents = EXCLUDED.sales_tax_cents,
+          total_amount_cents = EXCLUDED.total_amount_cents,
+          status = CASE
+            WHEN service_payments.status = 'paid' THEN service_payments.status
+            ELSE 'pending'
+          END,
+          stripe_checkout_session_id = CASE
+            WHEN service_payments.status = 'paid' THEN service_payments.stripe_checkout_session_id
+            ELSE NULL
+          END,
+          stripe_payment_intent_id = CASE
+            WHEN service_payments.status = 'paid' THEN service_payments.stripe_payment_intent_id
+            ELSE NULL
+          END,
+          failed_at = NULL,
+          canceled_at = NULL,
+          updated_at = now()
+      `,
+      [
+        match.service_request_id,
+        bookingId,
+        matchId,
+        match.requester_user_id,
+        match.provider_profile_id,
+        match.provider_user_id,
+        match.stripe_account_id,
+        charges.serviceAmountCents,
+        charges.platformFeeCents,
+        charges.salesTaxCents,
+        charges.totalAmountCents,
       ],
     );
 
@@ -617,7 +739,7 @@ export async function acceptProviderRequestMatch(userId: string, matchId: number
 
     await client.query("COMMIT");
     didBegin = false;
-    return true;
+    return { updated: true as const };
   } catch (error) {
     if (didBegin) {
       await client.query("ROLLBACK");
@@ -723,6 +845,11 @@ export async function searchProviderProfiles({
       p.minimum_notice_minutes as "minimumNoticeMinutes",
       p.transportation_available as "transportationAvailable",
       p.background_check_willing as "backgroundCheckWilling",
+      p.stripe_account_id as "stripeAccountId",
+      p.stripe_charges_enabled as "stripeChargesEnabled",
+      p.stripe_payouts_enabled as "stripePayoutsEnabled",
+      p.stripe_onboarding_complete as "stripeOnboardingComplete",
+      p.stripe_requirements_currently_due as "stripeRequirementsCurrentlyDue",
       p.status,
       COALESCE(
         (

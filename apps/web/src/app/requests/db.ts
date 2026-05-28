@@ -1,8 +1,9 @@
 import { ensureMessagingTables, ensureServiceRequestTables, getPool, getSql } from "../lib/database";
+import { getServicePaymentForRequester, type ServicePaymentRecord } from "../payments/db";
 import { providerServiceLabels } from "../provider/services.js";
 import { findRequestProviderMatches } from "./matching.js";
 
-export type ServiceRequestStatus = "submitted" | "confirmed" | "completed" | "canceled";
+export type ServiceRequestStatus = "submitted" | "payment_pending" | "confirmed" | "completed" | "canceled";
 
 export class UnavailableProviderMatchError extends Error {
   constructor() {
@@ -39,6 +40,7 @@ export type ServiceRequestRecord = {
   status: ServiceRequestStatus;
   createdAt: Date | null;
   booking: ServiceBookingRecord | null;
+  payment: ServicePaymentRecord | null;
   matches: RequestProviderMatchRecord[];
 };
 
@@ -65,7 +67,7 @@ export type ServiceBookingRecord = {
   bookingDate: string;
   startTime: string;
   endTime: string;
-  status: "confirmed" | "completed" | "canceled";
+  status: "payment_pending" | "confirmed" | "completed" | "canceled";
 };
 
 export type UpcomingVisitRecord = {
@@ -118,7 +120,7 @@ type RequestMatchCandidate = {
     bookingDate: string;
     startTime: string;
     endTime: string;
-    status: "confirmed" | "completed" | "canceled";
+    status: "payment_pending" | "confirmed" | "completed" | "canceled";
   }>;
 };
 
@@ -182,8 +184,8 @@ function normalizeBookings(bookings: unknown): RequestMatchCandidate["bookings"]
       },
     )
     .map((booking) => {
-      const status: "confirmed" | "completed" | "canceled" =
-        booking.status === "completed" || booking.status === "canceled"
+      const status: "payment_pending" | "confirmed" | "completed" | "canceled" =
+        booking.status === "completed" || booking.status === "canceled" || booking.status === "payment_pending"
           ? booking.status
           : "confirmed";
 
@@ -197,7 +199,12 @@ function normalizeBookings(bookings: unknown): RequestMatchCandidate["bookings"]
 }
 
 function normalizeServiceRequestStatus(status: unknown): ServiceRequestStatus {
-  if (status === "confirmed" || status === "completed" || status === "canceled") {
+  if (
+    status === "payment_pending" ||
+    status === "confirmed" ||
+    status === "completed" ||
+    status === "canceled"
+  ) {
     return status;
   }
 
@@ -258,7 +265,10 @@ function toRequestProviderMatchRecord(row: Record<string, unknown>): RequestProv
 }
 
 function toServiceBookingRecord(row: Record<string, unknown>): ServiceBookingRecord {
-  const status = row.status === "completed" || row.status === "canceled" ? row.status : "confirmed";
+  const status =
+    row.status === "payment_pending" || row.status === "completed" || row.status === "canceled"
+      ? row.status
+      : "confirmed";
 
   return {
     id: Number(row.id),
@@ -302,6 +312,7 @@ function toServiceRequestRecord(
   row: Record<string, unknown>,
   matches: RequestProviderMatchRecord[] = [],
   booking: ServiceBookingRecord | null = null,
+  payment: ServicePaymentRecord | null = null,
 ): ServiceRequestRecord {
   const matchPreference = row.matchPreference === "specific" ? "specific" : "any";
   const urgency = row.urgency === "urgent" || row.urgency === "flexible" ? row.urgency : "soon";
@@ -327,6 +338,7 @@ function toServiceRequestRecord(
     status: normalizeServiceRequestStatus(row.status),
     createdAt: (row.createdAt as Date | null) ?? null,
     booking,
+    payment,
     matches,
   };
 }
@@ -382,7 +394,7 @@ async function getRequestMatchCandidates(input: ServiceRequestInput) {
             ORDER BY sb.booking_date, sb.start_time
           )
           FROM service_bookings sb
-          WHERE sb.provider_profile_id = p.id AND sb.status = 'confirmed'
+          WHERE sb.provider_profile_id = p.id AND sb.status in ('payment_pending', 'confirmed')
         ),
         '[]'
       ) as bookings
@@ -671,12 +683,13 @@ export async function getServiceRequestForRequester(requestId: number, requester
   const records = rows as Array<Record<string, unknown>>;
   if (!records[0]) return null;
 
-  const [matches, booking] = await Promise.all([
+  const [matches, booking, payment] = await Promise.all([
     getRequestMatchesForRequester(requestId, requesterUserId, sql),
     getRequestBookingForRequester(requestId, requesterUserId, sql),
+    getServicePaymentForRequester(requestId, requesterUserId, sql),
   ]);
 
-  return toServiceRequestRecord(records[0], matches, booking);
+  return toServiceRequestRecord(records[0], matches, booking, payment);
 }
 
 export async function getServiceRequestsForRequester(requesterUserId: string) {
@@ -713,12 +726,13 @@ export async function getServiceRequestsForRequester(requesterUserId: string) {
   return Promise.all(
     records.map(async (record) => {
       const requestId = Number(record.id);
-      const [matches, booking] = await Promise.all([
+      const [matches, booking, payment] = await Promise.all([
         getRequestMatchesForRequester(requestId, requesterUserId, sql),
         getRequestBookingForRequester(requestId, requesterUserId, sql),
+        getServicePaymentForRequester(requestId, requesterUserId, sql),
       ]);
 
-      return toServiceRequestRecord(record, matches, booking);
+      return toServiceRequestRecord(record, matches, booking, payment);
     }),
   );
 }
@@ -818,6 +832,19 @@ export async function cancelServiceRequestForRequester(
           AND status <> 'canceled'
       `,
       [requestId, requesterUserId, cancellationReason],
+    );
+
+    await client.query(
+      `
+        UPDATE service_payments
+        SET
+          status = 'canceled',
+          canceled_at = now(),
+          updated_at = now()
+        WHERE service_request_id = $1
+          AND status <> 'paid'
+      `,
+      [requestId],
     );
 
     await client.query(

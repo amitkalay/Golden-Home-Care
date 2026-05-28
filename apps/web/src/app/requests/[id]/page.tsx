@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { CalendarCheck2, Clock, Home, MapPin, MessageCircle, UserRound } from "lucide-react";
+import { CalendarCheck2, Clock, CreditCard, Home, MapPin, MessageCircle, UserRound } from "lucide-react";
 import { notFound } from "next/navigation";
 import { requireUser } from "../../lib/auth";
 import { MessageThread } from "../../messages/message-thread";
 import { getMessageThreadBundlesForMatchesForUser } from "../../messages/db";
-import { getServiceRequestForRequester } from "../db";
+import { getServiceRequestForRequester, type ServiceRequestRecord } from "../db";
+import { payForServiceRequest } from "../actions";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,14 @@ type RequestConfirmationPageProps = {
   params?: Promise<{
     id?: string;
   }>;
+  searchParams?: Promise<{
+    payment?: string | string[];
+  }>;
 };
+
+function getParam(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 function parseRequestId(value?: string) {
   if (!value || !/^\d+$/.test(value)) return null;
@@ -46,6 +54,22 @@ function formatRate(rateCents: number | null) {
   return `$${Math.round(rateCents / 100)}/hr`;
 }
 
+function formatMoney(cents: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+  }).format(cents / 100);
+}
+
+function formatDuration(value: number) {
+  if (value % 60 === 0) {
+    const hours = value / 60;
+    return `${hours} ${hours === 1 ? "hour" : "hours"}`;
+  }
+
+  return `${value / 60} hours`;
+}
+
 function formatDistance(distanceMiles: number | null) {
   if (distanceMiles === null) return "Distance unavailable";
   const distance = distanceMiles < 10 ? distanceMiles.toFixed(1) : Math.round(distanceMiles).toString();
@@ -62,15 +86,101 @@ function formatMatchStatus(status: string) {
 }
 
 function formatRequestStatus(status: string) {
+  if (status === "payment_pending") return "payment due";
   if (status === "confirmed") return "confirmed";
   if (status === "completed") return "completed";
   if (status === "canceled") return "canceled";
   return "submitted";
 }
 
-export default async function RequestConfirmationPage({ params }: RequestConfirmationPageProps) {
+function PaymentReceipt({
+  acceptedMatch,
+  request,
+}: {
+  acceptedMatch: ServiceRequestRecord["matches"][number] | undefined;
+  request: ServiceRequestRecord;
+}) {
+  if (!request.payment) return null;
+
+  const payment = request.payment;
+  const isPaid = payment.status === "paid";
+  const canPay =
+    request.status === "payment_pending" &&
+    request.booking?.status === "payment_pending" &&
+    payment.status !== "paid" &&
+    payment.status !== "canceled";
+  const providerName =
+    request.booking?.providerDisplayName ||
+    acceptedMatch?.providerDisplayName ||
+    request.providerDisplayName ||
+    "Provider";
+  const paidDate = payment.paidAt
+    ? new Intl.DateTimeFormat("en-US", {
+        month: "2-digit",
+        day: "2-digit",
+        year: "numeric",
+      }).format(payment.paidAt)
+    : null;
+
+  return (
+    <section className="request-receipt" aria-label="Services and charges">
+      <header className="request-receipt-header">
+        <div>
+          <h2>Services & Charges</h2>
+          <p>
+            {isPaid && paidDate
+              ? `Paid on ${paidDate} - ${formatMoney(payment.totalAmountCents)}`
+              : `Payment due - ${formatMoney(payment.totalAmountCents)}`}
+          </p>
+        </div>
+        <CreditCard size={20} />
+      </header>
+
+      <div className="request-receipt-provider">
+        <strong>{providerName}</strong>
+        <span>{request.serviceLabel}</span>
+      </div>
+
+      <dl className="request-receipt-lines">
+        <div>
+          <dt>
+            {acceptedMatch?.hourlyRateCents
+              ? `${formatMoney(acceptedMatch.hourlyRateCents)} x ${formatDuration(request.durationMinutes)}`
+              : `${request.durationMinutes} minute service`}
+          </dt>
+          <dd>{formatMoney(payment.serviceAmountCents)}</dd>
+        </div>
+        <div>
+          <dt>Golden Home Care Service Fee</dt>
+          <dd>{formatMoney(payment.platformFeeCents)}</dd>
+        </div>
+        <div>
+          <dt>Sales Tax</dt>
+          <dd>{formatMoney(payment.salesTaxCents)}</dd>
+        </div>
+        <div className="request-receipt-total">
+          <dt>Subtotal</dt>
+          <dd>{formatMoney(payment.totalAmountCents)}</dd>
+        </div>
+      </dl>
+
+      {canPay ? (
+        <form action={payForServiceRequest}>
+          <input name="requestId" type="hidden" value={request.id} />
+          <button className="button button-primary" type="submit">
+            <CreditCard size={18} />
+            Pay with Stripe
+          </button>
+        </form>
+      ) : null}
+    </section>
+  );
+}
+
+export default async function RequestConfirmationPage({ params, searchParams }: RequestConfirmationPageProps) {
   const user = await requireUser();
   const resolvedParams = params ? await params : {};
+  const resolvedSearchParams = searchParams ? await searchParams : {};
   const requestId = parseRequestId(resolvedParams.id);
 
   if (!requestId) {
@@ -83,6 +193,8 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
     notFound();
   }
   const hasMatches = request.matches.length > 0;
+  const paymentStatus = getParam(resolvedSearchParams.payment);
+  const acceptedMatch = request.matches.find((match) => match.status === "accepted");
   const threadBundles = await getMessageThreadBundlesForMatchesForUser(
     request.matches.map((match) => match.id),
     user.id,
@@ -109,6 +221,8 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
         <p>
           {request.booking?.status === "confirmed"
             ? "A provider accepted this request and your booking is confirmed."
+            : request.booking?.status === "payment_pending"
+              ? "A provider accepted this request. Complete payment to confirm the booking."
             : hasMatches
               ? "Your request has been saved and sent to the selected provider."
               : "Your request was saved, but no eligible provider matched the selected time."}
@@ -119,6 +233,12 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
         <p className="form-alert success full" role="status">
           Request #{request.id} is {formatRequestStatus(request.status)}.
         </p>
+
+        {paymentStatus === "error" ? (
+          <p className="form-alert error full" role="alert">
+            We could not start Stripe Checkout. Try again from the payment receipt.
+          </p>
+        ) : null}
 
         <div className="request-confirmation-grid">
           <article>
@@ -163,7 +283,7 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
           <section className="request-notes">
             <CalendarCheck2 size={19} />
             <div>
-              <h2>Confirmed booking</h2>
+              <h2>{request.booking.status === "payment_pending" ? "Booking pending payment" : "Confirmed booking"}</h2>
               <p>
                 {request.booking.providerDisplayName || "Provider"} · {formatDate(request.booking.bookingDate)} ·{" "}
                 {formatTime(request.booking.startTime)} - {formatTime(request.booking.endTime)}
@@ -171,6 +291,8 @@ export default async function RequestConfirmationPage({ params }: RequestConfirm
             </div>
           </section>
         ) : null}
+
+        <PaymentReceipt acceptedMatch={acceptedMatch} request={request} />
 
         <section className="request-notes">
           <UserRound size={19} />

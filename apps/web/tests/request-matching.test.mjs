@@ -94,7 +94,7 @@ describe("request provider matching", () => {
     assert.deepEqual(results.map((item) => item.providerProfileId), [2]);
   });
 
-  it("excludes providers with overlapping confirmed bookings", () => {
+  it("excludes providers with overlapping confirmed or payment-pending bookings", () => {
     const results = findRequestProviderMatches([
       provider({
         id: 1,
@@ -125,12 +125,23 @@ describe("request provider matching", () => {
             bookingDate: "2026-05-21",
             startTime: "10:00",
             endTime: "11:00",
+            status: "payment_pending",
+          },
+        ],
+      }),
+      provider({
+        id: 4,
+        bookings: [
+          {
+            bookingDate: "2026-05-21",
+            startTime: "10:00",
+            endTime: "11:00",
             status: "canceled",
           },
         ],
       }),
     ], request({ windowStartTime: "09:00", windowEndTime: "12:00" }));
 
-    assert.deepEqual(results.map((item) => item.providerProfileId), [2, 3]);
+    assert.deepEqual(results.map((item) => item.providerProfileId), [2, 4]);
   });
 });

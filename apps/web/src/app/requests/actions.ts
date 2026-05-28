@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "../lib/auth";
 import { geocodeZipCode } from "../lib/zip-geocode";
+import { createBookingCheckoutSession } from "../payments/db";
 import {
   cancelServiceRequestForRequester,
   createServiceRequest as createServiceRequestRecord,
@@ -133,4 +134,23 @@ export async function cancelServiceRequest(formData: FormData) {
   revalidatePath("/account/notifications");
   revalidatePath(`/requests/${requestId}`);
   redirect("/account/requests?status=canceled&tab=canceled");
+}
+
+export async function payForServiceRequest(formData: FormData) {
+  const user = await requireUser();
+  const requestId = parseRequestId(formData);
+
+  if (!requestId) {
+    redirect("/account/requests?status=invalid");
+  }
+
+  let checkoutUrl: string;
+  try {
+    checkoutUrl = await createBookingCheckoutSession(requestId, user.id);
+  } catch (error) {
+    console.error("Failed to create Stripe Checkout session", error);
+    redirect(`/requests/${requestId}?payment=error`);
+  }
+
+  redirect(checkoutUrl);
 }

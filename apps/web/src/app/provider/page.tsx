@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { authOptions } from "../lib/auth";
 import { getUnreadMessageThreadCount } from "../messages/db";
 import { getUnreadNotificationCount } from "../notifications/db";
+import { refreshProviderStripeAccountForUser } from "../payments/db";
 import { ensureDraftProviderProfile, getProviderProfileByUserId } from "./db";
 import { ProviderDashboardCards, ProviderShell } from "./ui";
 
@@ -11,8 +12,13 @@ export const dynamic = "force-dynamic";
 type ProviderPageProps = {
   searchParams?: Promise<{
     profile?: string | string[];
+    stripe?: string | string[];
   }>;
 };
+
+function getParam(value?: string | string[]) {
+  return Array.isArray(value) ? value[0] : value;
+}
 
 export default async function ProviderPage({ searchParams }: ProviderPageProps) {
   const session = await getServerSession(authOptions);
@@ -22,13 +28,23 @@ export default async function ProviderPage({ searchParams }: ProviderPageProps) 
   }
 
   await ensureDraftProviderProfile(session.user.id, session.user.name);
+  const params = searchParams ? await searchParams : {};
+  const stripeStatus = getParam(params.stripe);
+
+  if (stripeStatus === "returned" || stripeStatus === "refresh") {
+    try {
+      await refreshProviderStripeAccountForUser(session.user.id);
+    } catch (error) {
+      console.error("Failed to refresh Stripe provider status", error);
+    }
+  }
+
   const [profile, notificationCount, messageCount] = await Promise.all([
     getProviderProfileByUserId(session.user.id),
     getUnreadNotificationCount(session.user.id),
     getUnreadMessageThreadCount(session.user.id),
   ]);
-  const params = searchParams ? await searchParams : {};
-  const profileStatus = Array.isArray(params.profile) ? params.profile[0] : params.profile;
+  const profileStatus = getParam(params.profile);
 
   return (
     <ProviderShell
@@ -40,6 +56,16 @@ export default async function ProviderPage({ searchParams }: ProviderPageProps) 
       {profileStatus === "active" ? (
         <p className="form-alert success" role="status">
           Your provider profile is active and eligible for search.
+        </p>
+      ) : null}
+      {stripeStatus === "returned" ? (
+        <p className="form-alert success" role="status">
+          Stripe test payment setup has been refreshed.
+        </p>
+      ) : null}
+      {stripeStatus === "refresh" || stripeStatus === "error" ? (
+        <p className="form-alert error" role="alert">
+          Stripe setup needs another attempt before payments can be accepted.
         </p>
       ) : null}
       <ProviderDashboardCards profile={profile} />

@@ -200,6 +200,19 @@
   text-underline-offset: 3px;
 }
 
+.provider-summary-card form {
+  margin: 0;
+}
+
+.provider-card-action {
+  width: fit-content;
+  padding: 0;
+  color: var(--deep);
+  font-weight: 800;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .provider-summary-card-wide {
   grid-column: span 2;
 }
@@ -493,6 +506,98 @@
 
 .request-match-message {
   margin-top: 10px;
+}
+
+.request-receipt {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+}
+
+.request-receipt-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.request-receipt-header h2 {
+  margin: 0 0 3px;
+  color: var(--deep);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 24px;
+  letter-spacing: 0;
+}
+
+.request-receipt-header p,
+.request-receipt-provider span {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.request-receipt-header svg {
+  color: var(--gold);
+}
+
+.request-receipt-provider {
+  display: grid;
+  gap: 4px;
+}
+
+.request-receipt-provider strong {
+  color: var(--deep);
+  font-size: 17px;
+}
+
+.request-receipt-lines {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.request-receipt-lines div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 13px 0;
+  border-top: 1px solid var(--line);
+}
+
+.request-receipt-lines dt,
+.request-receipt-lines dd {
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.35;
+}
+
+.request-receipt-lines dt {
+  color: var(--muted);
+}
+
+.request-receipt-lines dd {
+  flex: 0 0 auto;
+  color: var(--deep);
+  font-weight: 750;
+}
+
+.request-receipt-lines .request-receipt-total {
+  border-top-color: #cfc8bb;
+}
+
+.request-receipt-total dt,
+.request-receipt-total dd {
+  color: var(--deep);
+  font-weight: 850;
+}
+
+.request-receipt form {
+  margin: 0;
 }
 
 .request-actions {
