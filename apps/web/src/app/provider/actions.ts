@@ -5,6 +5,7 @@ import { getServerSession } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { authOptions } from "../lib/auth";
+import { createProviderStripeAccountLink } from "../payments/db";
 import {
   parseProviderAvailabilityForm,
   parseProviderProfileForm,
@@ -113,6 +114,20 @@ export async function saveProviderAvailability(formData: FormData) {
   redirect("/provider/availability?status=saved");
 }
 
+export async function startStripeProviderOnboarding() {
+  const userId = await requireProviderUserId();
+
+  let onboardingUrl: string;
+  try {
+    onboardingUrl = await createProviderStripeAccountLink(userId);
+  } catch (error) {
+    console.error("Failed to create Stripe provider onboarding link", error);
+    redirect("/provider?stripe=error");
+  }
+
+  redirect(onboardingUrl);
+}
+
 export async function acceptProviderRequestMatch(formData: FormData) {
   const userId = await requireProviderUserId();
   const matchId = parseProviderMatchId(formData);
@@ -121,15 +136,23 @@ export async function acceptProviderRequestMatch(formData: FormData) {
     redirect("/provider/messages?status=invalid");
   }
 
-  let updated = false;
+  let result: Awaited<ReturnType<typeof acceptProviderRequestMatchRecord>>;
   try {
-    updated = await acceptProviderRequestMatchRecord(userId, matchId);
+    result = await acceptProviderRequestMatchRecord(userId, matchId);
   } catch (error) {
     console.error("Failed to accept provider request match", error);
     redirect("/provider/messages?status=error");
   }
 
-  if (!updated) {
+  if (!result.updated) {
+    if (result.reason === "stripe_required") {
+      redirect("/provider/messages?status=stripe-required");
+    }
+
+    if (result.reason === "rate_required") {
+      redirect("/provider/messages?status=rate-required");
+    }
+
     redirect("/provider/messages?status=invalid");
   }
 
@@ -140,6 +163,7 @@ export async function acceptProviderRequestMatch(formData: FormData) {
   }
 
   revalidatePath("/account/notifications");
+  revalidatePath("/account/requests");
   revalidatePath("/provider/messages");
   redirect("/provider/messages?status=accepted&tab=accepted");
 }

@@ -45,7 +45,15 @@ function getTab(value?: string): InboxTab {
 
 function getStatusMessage(status?: string) {
   if (status === "accepted") {
-    return { className: "form-alert success", copy: "Request accepted. Other pending matches were closed." };
+    return { className: "form-alert success", copy: "Request accepted. The requester can now pay to confirm the booking." };
+  }
+
+  if (status === "stripe-required") {
+    return { className: "form-alert error", copy: "Set up Stripe test payments before accepting requests." };
+  }
+
+  if (status === "rate-required") {
+    return { className: "form-alert error", copy: "Add an hourly rate before accepting requests." };
   }
 
   if (status === "declined") {
@@ -126,6 +134,7 @@ function RequestCard({
   const isPending = request.matchStatus === "pending";
   const isAccepted = request.matchStatus === "accepted";
   const isProposed = request.matchStatus === "proposed";
+  const isPaymentPending = isAccepted && request.requestStatus === "payment_pending";
   const matchSource = request.matchSource === "on_demand" ? "On-demand" : "Weekly availability";
 
   return (
@@ -189,11 +198,18 @@ function RequestCard({
         </section>
       ) : null}
 
-      {isAccepted ? (
+      {isAccepted && request.requestStatus === "confirmed" ? (
         <section className="provider-inbox-contact">
           <h3>Requester contact</h3>
           <p>{request.contactEmail || "Email unavailable"}</p>
           <p>{request.contactPhone || "Phone unavailable"}</p>
+        </section>
+      ) : null}
+
+      {isPaymentPending ? (
+        <section className="provider-inbox-note">
+          <h3>Payment due</h3>
+          <p>Requester contact is shared after Stripe test payment confirms the booking.</p>
         </section>
       ) : null}
 

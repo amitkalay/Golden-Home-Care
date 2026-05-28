@@ -7,6 +7,7 @@ describe("service request flow source checks", () => {
     const proxy = await readFile(new URL("../src/proxy.ts", import.meta.url), "utf8");
 
     assert.match(proxy, /"\/requests\/:path\*"/);
+    assert.match(proxy, /"\/payments\/:path\*"/);
   });
 
   it("links provider search and provider cards to the request form", async () => {
@@ -57,6 +58,8 @@ describe("service request flow source checks", () => {
     assert.match(confirmationPage, /requireUser\(\)/);
     assert.match(confirmationPage, /getServiceRequestForRequester\(requestId, user\.id\)/);
     assert.match(confirmationPage, /formatRequestStatus\(request\.status\)/);
+    assert.match(confirmationPage, /PaymentReceipt/);
+    assert.match(confirmationPage, /payForServiceRequest/);
     assert.match(confirmationPage, /hasMatches/);
     assert.match(confirmationPage, /no eligible provider matched the selected time/i);
     assert.match(confirmationPage, /request\.matches/);

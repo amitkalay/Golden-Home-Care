@@ -92,7 +92,7 @@ function getOnDemandAvailabilitySource(provider, request, now) {
 function hasOverlappingConfirmedBooking(provider, request) {
   return provider.bookings?.some((booking) => {
     return (
-      booking.status === "confirmed" &&
+      (booking.status === "confirmed" || booking.status === "payment_pending") &&
       booking.bookingDate === request.requestedDate &&
       booking.startTime < request.windowEndTime &&
       booking.endTime > request.windowStartTime

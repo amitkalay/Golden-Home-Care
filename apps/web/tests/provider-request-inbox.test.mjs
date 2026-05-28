@@ -19,11 +19,14 @@ describe("provider request inbox source checks", () => {
     assert.match(db, /WHERE p\.user_id = \$\{userId\}/);
   });
 
-  it("hides requester contact fields until the provider accepts", async () => {
+  it("hides requester contact fields until accepted requests are paid", async () => {
     const db = await readFile(new URL("../src/app/provider/db.ts", import.meta.url), "utf8");
+    const page = await readFile(new URL("../src/app/provider/messages/page.tsx", import.meta.url), "utf8");
 
-    assert.match(db, /CASE WHEN rpm\.status = 'accepted' THEN sr\.contact_email ELSE NULL END/);
-    assert.match(db, /CASE WHEN rpm\.status = 'accepted' THEN sr\.contact_phone ELSE NULL END/);
+    assert.match(db, /CASE WHEN rpm\.status = 'accepted' AND sr\.status = 'confirmed' THEN sr\.contact_email ELSE NULL END/);
+    assert.match(db, /CASE WHEN rpm\.status = 'accepted' AND sr\.status = 'confirmed' THEN sr\.contact_phone ELSE NULL END/);
+    assert.match(page, /request\.requestStatus === "confirmed"/);
+    assert.match(page, /Requester contact is shared after Stripe test payment confirms the booking/);
   });
 
   it("scopes response actions to pending matches owned by the provider", async () => {

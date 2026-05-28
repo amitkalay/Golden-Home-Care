@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { BadgeCheck, CalendarCheck2, MessageCircle, Search, UserRound } from "lucide-react";
+import { BadgeCheck, CalendarCheck2, CreditCard, MessageCircle, Search, UserRound } from "lucide-react";
 import { providerServiceOptions } from "./services.js";
 import type { ProviderProfileRecord } from "./db";
 import { SignOutButton } from "../sign-out-button";
@@ -14,6 +14,7 @@ import {
   saveProviderAvailability,
   saveProviderOnboarding,
   saveProviderProfile,
+  startStripeProviderOnboarding,
 } from "./actions";
 
 export function ProviderShell({
@@ -358,6 +359,12 @@ export function ProviderDashboardCards({ profile }: { profile: ProviderProfileRe
   const isActive = profile?.status === "active";
   const publicSearchHref = profile?.zipCode ? `/providers?zip=${profile.zipCode}` : "/providers";
   const hasAvailability = Boolean(profile?.availabilityWindows.length || profile?.availabilitySummary);
+  const stripeReady = Boolean(
+    profile?.stripeAccountId &&
+      profile.stripeChargesEnabled &&
+      profile.stripePayoutsEnabled &&
+      profile.stripeOnboardingComplete,
+  );
 
   return (
     <div className="provider-dashboard-grid">
@@ -384,6 +391,20 @@ export function ProviderDashboardCards({ profile }: { profile: ProviderProfileRe
         <span>Public listing</span>
         <strong>{isActive ? "Live" : "Hidden"}</strong>
         <p>{isActive ? <Link href={publicSearchHref}>View in search</Link> : <Link href="/provider/onboarding">Finish onboarding</Link>}</p>
+      </article>
+      <article className="provider-summary-card">
+        <CreditCard size={26} />
+        <span>Payments</span>
+        <strong>{stripeReady ? "Ready" : "Setup"}</strong>
+        {stripeReady ? (
+          <p>Stripe test payments are enabled.</p>
+        ) : (
+          <form action={startStripeProviderOnboarding}>
+            <button className="nav-link-button provider-card-action" type="submit">
+              {profile?.stripeAccountId ? "Finish Stripe setup" : "Set up Stripe"}
+            </button>
+          </form>
+        )}
       </article>
       <article className="provider-summary-card provider-summary-card-wide">
         <MessageCircle size={26} />

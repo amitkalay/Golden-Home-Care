@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { CalendarCheck2, Clock, Home, MapPin, MessageCircle, XCircle } from "lucide-react";
+import { CalendarCheck2, Clock, CreditCard, Home, MapPin, MessageCircle, XCircle } from "lucide-react";
 import { requireUser } from "../../lib/auth";
 import { getUnreadNotificationCount } from "../../notifications/db";
-import { cancelServiceRequest } from "../../requests/actions";
+import { cancelServiceRequest, payForServiceRequest } from "../../requests/actions";
 import type { ServiceRequestRecord } from "../../requests/db";
 import { getServiceRequestsForRequester } from "../../requests/db";
 
@@ -76,6 +76,7 @@ function getRequestRollupStatus(request: ServiceRequestRecord): RequestTab {
   if (request.status === "canceled") return "canceled";
   if (request.status === "completed" || request.booking?.status === "completed") return "completed";
   if (request.status === "confirmed" || request.booking?.status === "confirmed") return "confirmed";
+  if (request.status === "payment_pending" || request.booking?.status === "payment_pending") return "accepted";
   if (request.matches.some((match) => match.status === "accepted")) return "accepted";
   if (
     request.matches.length > 0 &&
@@ -110,6 +111,9 @@ function countForTab(requests: ServiceRequestRecord[], tab: RequestTab) {
 
 function RequestCard({ request }: { request: ServiceRequestRecord }) {
   const status = getRequestRollupStatus(request);
+  const isPaymentDue =
+    request.status === "payment_pending" ||
+    request.booking?.status === "payment_pending";
   const canCancel = status !== "completed" && status !== "canceled";
   const messageUnreadCount = request.matches.reduce(
     (count, match) => count + match.messageUnreadCount,
@@ -121,7 +125,9 @@ function RequestCard({ request }: { request: ServiceRequestRecord }) {
     <article className="provider-inbox-card">
       <header className="provider-inbox-card-header">
         <div>
-          <span className={`provider-status-badge status-${status}`}>{getStatusLabel(status)}</span>
+          <span className={`provider-status-badge status-${status}`}>
+            {isPaymentDue ? "Payment due" : getStatusLabel(status)}
+          </span>
           <h2>{request.serviceLabel}</h2>
           <p>Request #{request.id}</p>
         </div>
@@ -152,7 +158,7 @@ function RequestCard({ request }: { request: ServiceRequestRecord }) {
           </dt>
           <dd>
             {request.booking
-              ? `${request.booking.providerDisplayName || "Provider"} | ${formatTime(request.booking.startTime)}-${formatTime(request.booking.endTime)}`
+              ? `${request.booking.providerDisplayName || "Provider"} | ${formatTime(request.booking.startTime)}-${formatTime(request.booking.endTime)}${request.booking.status === "payment_pending" ? " | payment due" : ""}`
               : "Not confirmed yet"}
           </dd>
         </div>
@@ -207,6 +213,15 @@ function RequestCard({ request }: { request: ServiceRequestRecord }) {
             Messages
             {messageUnreadCount ? ` (${messageUnreadCount})` : ""}
           </Link>
+        ) : null}
+        {isPaymentDue ? (
+          <form action={payForServiceRequest}>
+            <input name="requestId" type="hidden" value={request.id} />
+            <button className="button button-primary" type="submit">
+              <CreditCard size={17} />
+              Pay
+            </button>
+          </form>
         ) : null}
         {canCancel ? (
           <form action={cancelServiceRequest}>

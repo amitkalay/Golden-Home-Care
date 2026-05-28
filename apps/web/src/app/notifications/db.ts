@@ -460,7 +460,7 @@ export async function notifyAfterProviderAccepted(matchId: number) {
     recipientUserId: String(accepted.recipientUserId),
     type: "requester_request_accepted",
     title: `${serviceLabel} request accepted`,
-    body: `${providerName} accepted your ${serviceLabel} request for ${formatRequestWindow(accepted)}.`,
+    body: `${providerName} accepted your ${serviceLabel} request for ${formatRequestWindow(accepted)}. Complete payment to confirm the booking.`,
     href: `/requests/${accepted.requestId}`,
     serviceRequestId: Number(accepted.requestId),
     requestProviderMatchId: Number(accepted.matchId),
