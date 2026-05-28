@@ -95,6 +95,10 @@ describe("realtime request messaging source checks", () => {
       new URL("../src/app/messages/inbox-popover.tsx", import.meta.url),
       "utf8",
     );
+    const threadMetadata = await readFile(
+      new URL("../src/app/messages/thread-metadata.ts", import.meta.url),
+      "utf8",
+    );
     const messageDb = await readFile(new URL("../src/app/messages/db.ts", import.meta.url), "utf8");
     const homepage = await readFile(new URL("../src/app/page.tsx", import.meta.url), "utf8");
     const requestPage = await readFile(new URL("../src/app/requests/[id]/page.tsx", import.meta.url), "utf8");
@@ -110,14 +114,28 @@ describe("realtime request messaging source checks", () => {
     assert.match(threadComponent, /private-message-thread-\$\{thread\.id\}/);
     assert.match(threadComponent, /\/api\/messages\/send/);
     assert.match(threadComponent, /\/api\/messages\/read/);
+    assert.match(threadComponent, /getThreadTransactionLine\(thread\)/);
+    assert.match(threadComponent, /Request #\{thread\.serviceRequestId\}/);
+    assert.doesNotMatch(threadComponent, /Request match #/);
     assert.match(messageDb, /export async function getMessageInboxThreadBundlesForUser/);
+    assert.match(messageDb, /sr\.service_type as "serviceType"/);
+    assert.match(messageDb, /to_char\(sr\.requested_date, 'YYYY-MM-DD'\) as "requestedDate"/);
+    assert.match(messageDb, /booking\.status as "bookingStatus"/);
+    assert.match(messageDb, /as "scheduledEndAt"/);
     assert.match(messageDb, /LEFT JOIN LATERAL/);
     assert.match(messageDb, /ORDER BY COALESCE\(latest_message\.created_at, mt\.updated_at\) DESC/);
     assert.match(homepage, /getMessageInboxThreadBundlesForUser\(session\.user\.id\)/);
     assert.match(homepage, /<InboxPopover/);
     assert.match(inboxPopover, /"use client"/);
     assert.match(inboxPopover, /Search messages/);
-    assert.match(inboxPopover, /setFilter\("unread"\)/);
+    assert.match(inboxPopover, /inboxLifecycleTabs/);
+    assert.match(inboxPopover, /getThreadTransactionLine\(bundle\.thread\)/);
+    assert.match(inboxPopover, /getThreadDetailLine\(bundle\.thread\)/);
+    assert.match(inboxPopover, /thread-status-badge/);
+    assert.match(threadMetadata, /Current/);
+    assert.match(threadMetadata, /Upcoming/);
+    assert.match(threadMetadata, /Past/);
+    assert.match(threadMetadata, /export function getThreadLifecycleTab/);
     assert.match(inboxPopover, /function openThread\(threadId: number\)/);
     assert.match(inboxPopover, /\/api\/messages\/read/);
     assert.match(inboxPopover, /<MessageThread/);

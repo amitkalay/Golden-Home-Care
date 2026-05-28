@@ -4,8 +4,15 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronLeft, Inbox as InboxIcon, MessageCircle, Search, X } from "lucide-react";
 import { MessageThread } from "./message-thread";
 import type { MessageInboxThreadBundle } from "./db";
-
-type InboxFilter = "all" | "unread";
+import {
+  getThreadDetailLine,
+  getThreadLifecycleTab,
+  getThreadStatusLabel,
+  getThreadStatusTone,
+  getThreadTransactionLine,
+  inboxLifecycleTabs,
+  type InboxLifecycleTab,
+} from "./thread-metadata";
 
 type InboxPopoverProps = {
   currentUserId: string;
@@ -57,7 +64,7 @@ function getThreadPreview(bundle: MessageInboxThreadBundle, currentUserId: strin
 
 export function InboxPopover({ currentUserId, initialThreads }: InboxPopoverProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [filter, setFilter] = useState<InboxFilter>("all");
+  const [activeTab, setActiveTab] = useState<InboxLifecycleTab>("current");
   const [query, setQuery] = useState("");
   const [selectedThreadId, setSelectedThreadId] = useState<number | null>(null);
   const [threadBundles, setThreadBundles] = useState(initialThreads);
@@ -69,15 +76,37 @@ export function InboxPopover({ currentUserId, initialThreads }: InboxPopoverProp
     () => threadBundles.find((bundle) => bundle.thread.id === selectedThreadId) ?? null,
     [selectedThreadId, threadBundles],
   );
+  const tabCounts = useMemo(
+    () =>
+      inboxLifecycleTabs.reduce(
+        (counts, tab) => ({
+          ...counts,
+          [tab.value]: threadBundles.filter((bundle) => getThreadLifecycleTab(bundle.thread) === tab.value).length,
+        }),
+        { current: 0, upcoming: 0, past: 0 } satisfies Record<InboxLifecycleTab, number>,
+      ),
+    [threadBundles],
+  );
   const visibleBundles = useMemo(
     () =>
       threadBundles.filter((bundle) => {
-        if (filter === "unread" && bundle.thread.unreadCount === 0) return false;
+        if (getThreadLifecycleTab(bundle.thread) !== activeTab) return false;
         if (!normalizedQuery) return true;
 
         const searchableText = [
           bundle.thread.otherParticipantName,
+          bundle.thread.serviceRequestId.toString(),
           bundle.thread.requestProviderMatchId.toString(),
+          bundle.thread.serviceType,
+          bundle.thread.serviceLabel,
+          bundle.thread.zipCode,
+          bundle.thread.requestStatus,
+          bundle.thread.matchStatus,
+          bundle.thread.bookingStatus,
+          bundle.thread.urgency,
+          getThreadStatusLabel(bundle.thread),
+          getThreadTransactionLine(bundle.thread),
+          getThreadDetailLine(bundle.thread),
           getThreadPreview(bundle, currentUserId),
         ]
           .join(" ")
@@ -85,8 +114,9 @@ export function InboxPopover({ currentUserId, initialThreads }: InboxPopoverProp
 
         return searchableText.includes(normalizedQuery);
       }),
-    [currentUserId, filter, normalizedQuery, threadBundles],
+    [activeTab, currentUserId, normalizedQuery, threadBundles],
   );
+  const activeTabLabel = inboxLifecycleTabs.find((tab) => tab.value === activeTab)?.label ?? "Current";
 
   useEffect(() => {
     setThreadBundles(initialThreads);
@@ -180,23 +210,19 @@ export function InboxPopover({ currentUserId, initialThreads }: InboxPopoverProp
             />
           </label>
 
-          <div className="inbox-filters" aria-label="Inbox filters">
-            <button
-              aria-pressed={filter === "all"}
-              className={filter === "all" ? "active" : undefined}
-              onClick={() => setFilter("all")}
-              type="button"
-            >
-              All
-            </button>
-            <button
-              aria-pressed={filter === "unread"}
-              className={filter === "unread" ? "active" : undefined}
-              onClick={() => setFilter("unread")}
-              type="button"
-            >
-              Unread
-            </button>
+          <div className="inbox-filters" aria-label="Conversation lifecycle tabs">
+            {inboxLifecycleTabs.map((tab) => (
+              <button
+                aria-pressed={activeTab === tab.value}
+                className={activeTab === tab.value ? "active" : undefined}
+                key={tab.value}
+                onClick={() => setActiveTab(tab.value)}
+                type="button"
+              >
+                {tab.label}
+                <span>{tabCounts[tab.value]}</span>
+              </button>
+            ))}
           </div>
 
           <div className={`inbox-body${selectedBundle ? " has-selection" : ""}`}>
@@ -206,6 +232,7 @@ export function InboxPopover({ currentUserId, initialThreads }: InboxPopoverProp
                   const latestMessage = getLatestMessage(bundle);
                   const isSelected = selectedThreadId === bundle.thread.id;
                   const preview = getThreadPreview(bundle, currentUserId);
+                  const statusTone = getThreadStatusTone(bundle.thread);
 
                   return (
                     <li key={bundle.thread.id}>
@@ -220,12 +247,19 @@ export function InboxPopover({ currentUserId, initialThreads }: InboxPopoverProp
                         </span>
                         <span className="inbox-thread-copy">
                           <strong>{bundle.thread.otherParticipantName}</strong>
-                          <span>{preview}</span>
+                          <span className="inbox-thread-preview">{preview}</span>
+                          <span className="inbox-thread-transaction">
+                            {getThreadTransactionLine(bundle.thread)}
+                          </span>
+                          <span className="inbox-thread-detail">{getThreadDetailLine(bundle.thread)}</span>
                         </span>
                         <span className="inbox-thread-meta">
                           <time dateTime={latestMessage?.createdAt ?? bundle.thread.updatedAt}>
                             {formatRelativeTime(getThreadActivityAt(bundle))}
                           </time>
+                          <span className={`thread-status-badge status-${statusTone}`}>
+                            {getThreadStatusLabel(bundle.thread)}
+                          </span>
                           {bundle.thread.unreadCount ? (
                             <span className="inbox-thread-unread">{bundle.thread.unreadCount}</span>
                           ) : null}
@@ -237,8 +271,14 @@ export function InboxPopover({ currentUserId, initialThreads }: InboxPopoverProp
               ) : (
                 <li className="inbox-empty">
                   <MessageCircle size={22} />
-                  <strong>{threadBundles.length ? "No matching threads" : "No conversations yet"}</strong>
-                  <span>{threadBundles.length ? "Try a different search." : "Messages from request matches will appear here."}</span>
+                  <strong>
+                    {threadBundles.length ? `No ${activeTabLabel.toLowerCase()} threads` : "No conversations yet"}
+                  </strong>
+                  <span>
+                    {threadBundles.length
+                      ? "Try a different search or lifecycle tab."
+                      : "Messages from request matches will appear here."}
+                  </span>
                 </li>
               )}
             </ol>
