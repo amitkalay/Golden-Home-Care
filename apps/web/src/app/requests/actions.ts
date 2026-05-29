@@ -17,47 +17,83 @@ import {
 } from "../notifications/db";
 import { parseServiceRequestForm } from "./validation.js";
 
+export type CreateServiceRequestFieldErrors = Partial<Record<string, string>>;
+
+export type CreateServiceRequestState = {
+  message: string;
+  fieldErrors: CreateServiceRequestFieldErrors;
+  values: Record<string, string>;
+};
+
 function parseRequestId(formData: FormData) {
   const requestId = Number.parseInt(String(formData.get("requestId") ?? ""), 10);
 
   return Number.isInteger(requestId) && requestId > 0 ? requestId : null;
 }
 
-function buildNewRequestRedirect(
-  status: "invalid" | "error" | "provider-required" | "unavailable",
-  input?: {
-    providerProfileId?: number | null;
-    serviceType?: string;
-    zipCode?: string;
-  },
-) {
-  const params = new URLSearchParams({ status });
+function getStringValue(formData: FormData, key: string) {
+  const value = formData.get(key);
 
-  if (input?.providerProfileId) {
-    params.set("providerId", String(input.providerProfileId));
-    params.set("matchPreference", "specific");
-  }
-  if (input?.serviceType) params.set("service", input.serviceType);
-  if (input?.zipCode) params.set("zip", input.zipCode);
-
-  return `/requests/new?${params.toString()}`;
+  return typeof value === "string" ? value : "";
 }
 
-export async function createServiceRequest(formData: FormData) {
+function getSubmittedValues(formData: FormData) {
+  return {
+    providerProfileId: getStringValue(formData, "providerProfileId"),
+    matchPreference: getStringValue(formData, "matchPreference"),
+    serviceType: getStringValue(formData, "serviceType"),
+    zipCode: getStringValue(formData, "zipCode"),
+    requestedDate: getStringValue(formData, "requestedDate"),
+    durationMinutes: getStringValue(formData, "durationMinutes"),
+    windowStartTime: getStringValue(formData, "windowStartTime"),
+    windowEndTime: getStringValue(formData, "windowEndTime"),
+    urgency: getStringValue(formData, "urgency"),
+    contactName: getStringValue(formData, "contactName"),
+    contactEmail: getStringValue(formData, "contactEmail"),
+    contactPhone: getStringValue(formData, "contactPhone"),
+    notes: getStringValue(formData, "notes"),
+  };
+}
+
+function getErrorMessage(fieldErrors: CreateServiceRequestFieldErrors) {
+  const messages = [...new Set(Object.values(fieldErrors).filter(Boolean))];
+
+  return messages.length ? `Please fix: ${messages.join("; ")}` : "Please fix the highlighted fields.";
+}
+
+function buildRequestErrorState(
+  formData: FormData,
+  fieldErrors: CreateServiceRequestFieldErrors,
+): CreateServiceRequestState {
+  return {
+    message: getErrorMessage(fieldErrors),
+    fieldErrors,
+    values: getSubmittedValues(formData),
+  };
+}
+
+export async function createServiceRequest(
+  _previousState: CreateServiceRequestState,
+  formData: FormData,
+) {
   const user = await requireUser();
   const result = parseServiceRequestForm(formData);
 
   if (!result.ok) {
-    redirect(buildNewRequestRedirect("invalid", result.data));
+    return buildRequestErrorState(formData, result.errors as CreateServiceRequestFieldErrors);
   }
 
   const location = await geocodeZipCode(result.data.zipCode);
   if (!location) {
-    redirect(buildNewRequestRedirect("invalid", result.data));
+    return buildRequestErrorState(formData, {
+      zipCode: "Enter a ZIP code we can locate",
+    });
   }
 
   if (result.data.matchPreference !== "specific" || !result.data.providerProfileId) {
-    redirect(buildNewRequestRedirect("provider-required", result.data));
+    return buildRequestErrorState(formData, {
+      providerProfileId: "Choose an active provider before submitting",
+    });
   }
 
   const matchPreference = "specific";
@@ -72,7 +108,9 @@ export async function createServiceRequest(formData: FormData) {
   );
 
   if (!target || !targetOffersService) {
-    redirect(buildNewRequestRedirect("provider-required", result.data));
+    return buildRequestErrorState(formData, {
+      serviceType: target ? "This provider does not offer the selected service" : "Choose an active provider before submitting",
+    });
   }
 
   let requestId: number;
@@ -85,11 +123,15 @@ export async function createServiceRequest(formData: FormData) {
     }, location);
   } catch (error) {
     if (error instanceof UnavailableProviderMatchError) {
-      redirect(buildNewRequestRedirect("unavailable", result.data));
+      return buildRequestErrorState(formData, {
+        timeWindow: "This provider is not available for the selected date, time, duration, or existing bookings",
+      });
     }
 
     console.error("Failed to create service request", error);
-    redirect(buildNewRequestRedirect("error", result.data));
+    return buildRequestErrorState(formData, {
+      form: "We could not submit your request. Try again.",
+    });
   }
 
   try {
