@@ -64,4 +64,37 @@ describe("Stripe Connect payment source checks", () => {
     assert.match(paymentsDb, /WHERE id = \$3/);
     assert.match(returnPage, /reconcileCheckoutSessionForRequester\(sessionId, user\.id\)/);
   });
+
+  it("adds an account payments hub without client-side card collection", async () => {
+    const paymentsPage = await readFile(
+      new URL("../src/app/account/payments/page.tsx", import.meta.url),
+      "utf8",
+    );
+    const accountPaymentsActions = await readFile(
+      new URL("../src/app/account/payments/actions.ts", import.meta.url),
+      "utf8",
+    );
+    const paymentsDb = await readFile(new URL("../src/app/payments/db.ts", import.meta.url), "utf8");
+    const accountPage = await readFile(new URL("../src/app/account/page.tsx", import.meta.url), "utf8");
+    const accountRequestsPage = await readFile(
+      new URL("../src/app/account/requests/page.tsx", import.meta.url),
+      "utf8",
+    );
+    const providerUi = await readFile(new URL("../src/app/provider/ui.tsx", import.meta.url), "utf8");
+
+    assert.match(paymentsPage, /Requester payments/);
+    assert.match(paymentsPage, /Provider payouts/);
+    assert.match(paymentsPage, /payForServiceRequest/);
+    assert.match(paymentsPage, /stripeRequirementsCurrentlyDue/);
+    assert.match(accountPaymentsActions, /startAccountStripeProviderOnboarding/);
+    assert.match(accountPaymentsActions, /returnPath: "\/account\/payments\?stripe=returned"/);
+    assert.match(accountPaymentsActions, /refreshPath: "\/account\/payments\?stripe=refresh"/);
+    assert.match(paymentsDb, /returnPath \?\? "\/provider\?stripe=returned"/);
+    assert.match(paymentsDb, /refreshPath \?\? "\/provider\?stripe=refresh"/);
+    assert.match(accountPage, /\/account\/payments/);
+    assert.match(accountRequestsPage, /\/account\/payments/);
+    assert.match(providerUi, /\/account\/payments/);
+    assert.doesNotMatch(paymentsPage, /NEXT_STRIPE_PUBLISHABLE_KEY|Stripe Elements|saved card/i);
+    assert.doesNotMatch(accountPaymentsActions, /NEXT_STRIPE_PUBLISHABLE_KEY/);
+  });
 });

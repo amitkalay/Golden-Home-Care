@@ -67,6 +67,7 @@ export default async function AccountPage({ searchParams }: AccountPageProps) {
             {unreadNotificationCount ? <span>{unreadNotificationCount}</span> : null}
           </Link>
           <Link href="/account/requests">My requests</Link>
+          <Link href="/account/payments">Payments</Link>
           <Link href="/providers">Find providers</Link>
           <Link href="/provider/onboarding">Become a provider</Link>
           <Link href="/provider">Provider dashboard</Link>

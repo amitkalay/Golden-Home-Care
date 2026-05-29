@@ -136,6 +136,7 @@
 .provider-request-cta,
 .provider-results,
 .provider-empty-state,
+.account-payments-layout,
 .request-confirmation-card,
 .provider-shell > .form-alert,
 .provider-search-shell > .form-alert {
@@ -1466,6 +1467,169 @@
   font-size: 28px;
 }
 
+.provider-empty-state.compact {
+  padding: 22px;
+}
+
+.provider-empty-state.compact h4 {
+  margin: 0 0 6px;
+  color: var(--deep);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+}
+
+.account-payments-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.account-payments-main,
+.account-payments-panel,
+.account-payments-group,
+.account-payment-list {
+  display: grid;
+  gap: 14px;
+}
+
+.account-payments-panel {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fffef9;
+  box-shadow: 0 12px 28px rgba(74, 51, 17, 0.09);
+}
+
+.account-payments-section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.account-payments-section-heading h2 {
+  margin: 0 0 4px;
+  color: var(--deep);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.account-payments-section-heading p,
+.account-payment-card p,
+.account-payout-status p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.account-payment-icon {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff8e5;
+  color: var(--gold);
+}
+
+.account-payments-group h3 {
+  margin: 0;
+  color: var(--deep);
+  font-size: 18px;
+}
+
+.account-payment-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+}
+
+.account-payment-card.compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.account-payment-card-header,
+.account-payment-history-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.account-payment-card h3,
+.account-payout-status h3,
+.account-payment-requirements h3 {
+  margin: 6px 0 4px;
+  color: var(--deep);
+  font-size: 20px;
+}
+
+.account-payment-card-header > strong,
+.account-payment-history-actions > strong {
+  color: var(--deep);
+  font-size: 22px;
+  white-space: nowrap;
+}
+
+.account-payment-breakdown {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.account-payment-breakdown div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+
+.account-payment-breakdown dt,
+.account-payment-breakdown dd {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.account-payment-breakdown dt {
+  color: var(--muted);
+}
+
+.account-payment-breakdown dd {
+  color: var(--deep);
+  font-weight: 750;
+  text-align: right;
+}
+
+.account-payout-status {
+  display: grid;
+  gap: 4px;
+}
+
+.account-payment-requirements {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+}
+
+.account-payment-requirements ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
 @media (max-width: 780px) {
   .auth-shell,
   .provider-shell,
@@ -1494,6 +1658,7 @@
   .provider-profile-facts,
   .request-confirmation-grid,
   .availability-day-row,
+  .account-payments-layout,
   .public-provider-card {
     grid-template-columns: 1fr;
   }
@@ -1505,6 +1670,9 @@
 
   .notification-toolbar,
   .provider-inbox-card-header,
+  .account-payment-card-header,
+  .account-payment-card.compact,
+  .account-payment-history-actions,
   .message-thread-header {
     align-items: flex-start;
     flex-direction: column;
@@ -1520,6 +1688,10 @@
 
   .provider-summary-card-wide {
     grid-column: auto;
+  }
+
+  .account-payment-card.compact {
+    grid-template-columns: 1fr;
   }
 
   .public-provider-photo {
