@@ -17,6 +17,16 @@ export type RequestProviderTarget = {
   displayName: string | null;
   zipCode: string | null;
   services: Array<{ serviceType: string; label: string }>;
+  availabilityTimezone: string;
+  onDemandAvailable: boolean;
+  minimumNoticeMinutes: number;
+  availabilityWindows: Array<{ dayOfWeek: number; startTime: string; endTime: string }>;
+  bookings: Array<{
+    bookingDate: string;
+    startTime: string;
+    endTime: string;
+    status: "payment_pending" | "confirmed" | "completed" | "canceled";
+  }>;
 };
 
 export type ServiceRequestRecord = {
@@ -217,6 +227,11 @@ function toProviderTarget(row: Record<string, unknown>): RequestProviderTarget {
     displayName: (row.displayName as string | null) ?? null,
     zipCode: (row.zipCode as string | null) ?? null,
     services: normalizeServices(row.services),
+    availabilityTimezone: (row.availabilityTimezone as string | null) ?? "America/Los_Angeles",
+    onDemandAvailable: Boolean(row.onDemandAvailable),
+    minimumNoticeMinutes: row.minimumNoticeMinutes === null ? 120 : Number(row.minimumNoticeMinutes),
+    availabilityWindows: normalizeAvailabilityWindows(row.availabilityWindows),
+    bookings: normalizeBookings(row.bookings),
   };
 }
 
@@ -421,6 +436,9 @@ export async function getActiveRequestProviderTarget(providerId: number) {
       p.id,
       p.display_name as "displayName",
       p.zip_code as "zipCode",
+      p.availability_timezone as "availabilityTimezone",
+      p.on_demand_available as "onDemandAvailable",
+      p.minimum_notice_minutes as "minimumNoticeMinutes",
       COALESCE(
         (
           SELECT json_agg(json_build_object('serviceType', ps.service_type) ORDER BY ps.service_type)
@@ -428,7 +446,38 @@ export async function getActiveRequestProviderTarget(providerId: number) {
           WHERE ps.provider_profile_id = p.id
         ),
         '[]'
-      ) as services
+      ) as services,
+      COALESCE(
+        (
+          SELECT json_agg(
+            json_build_object(
+              'dayOfWeek', paw.day_of_week,
+              'startTime', to_char(paw.start_time, 'HH24:MI'),
+              'endTime', to_char(paw.end_time, 'HH24:MI')
+            )
+            ORDER BY paw.day_of_week, paw.start_time
+          )
+          FROM provider_availability_windows paw
+          WHERE paw.provider_profile_id = p.id
+        ),
+        '[]'
+      ) as "availabilityWindows",
+      COALESCE(
+        (
+          SELECT json_agg(
+            json_build_object(
+              'bookingDate', to_char(sb.booking_date, 'YYYY-MM-DD'),
+              'startTime', to_char(sb.start_time, 'HH24:MI'),
+              'endTime', to_char(sb.end_time, 'HH24:MI'),
+              'status', sb.status
+            )
+            ORDER BY sb.booking_date, sb.start_time
+          )
+          FROM service_bookings sb
+          WHERE sb.provider_profile_id = p.id AND sb.status in ('payment_pending', 'confirmed')
+        ),
+        '[]'
+      ) as bookings
     FROM provider_profiles p
     WHERE p.id = ${providerId} AND p.status = 'active'
   `;

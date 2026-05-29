@@ -136,6 +136,7 @@
 .provider-request-cta,
 .provider-results,
 .provider-empty-state,
+.account-payments-layout,
 .request-confirmation-card,
 .provider-shell > .form-alert,
 .provider-search-shell > .form-alert {
@@ -405,6 +406,224 @@
 .request-context svg {
   flex: 0 0 auto;
   color: var(--gold);
+}
+
+.request-availability-calendar {
+  display: grid;
+  gap: 13px;
+  padding: 14px;
+  border: 1px solid #d7e5d8;
+  border-radius: 5px;
+  background: #f8fcf6;
+  color: #1f2824;
+}
+
+.request-availability-calendar > header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+}
+
+.request-availability-calendar > header div:first-child {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.request-availability-calendar > header span {
+  color: #5e675f;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.request-availability-calendar > header strong {
+  color: #1f2824;
+  font-size: 15px;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.request-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.request-calendar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  background: #fff;
+  color: #39433d;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1;
+  text-transform: none;
+}
+
+.request-calendar-legend span::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+}
+
+.request-calendar-legend .legend-available::before {
+  background: #2f8157;
+}
+
+.request-calendar-legend .legend-booked::before {
+  background: #b84d33;
+}
+
+.request-calendar-legend .legend-short::before {
+  background: #9a8f7c;
+}
+
+.request-calendar-windows {
+  display: grid;
+  gap: 11px;
+}
+
+.request-calendar-window {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.request-calendar-window-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #2d3731;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.request-calendar-window-label svg {
+  flex: 0 0 auto;
+  color: var(--gold);
+}
+
+.request-calendar-track {
+  position: relative;
+  min-height: 66px;
+  overflow: hidden;
+  border: 1px solid #ddd9d2;
+  border-radius: 5px;
+  background: repeating-linear-gradient(
+      90deg,
+      rgba(31, 40, 36, 0.06) 0,
+      rgba(31, 40, 36, 0.06) 1px,
+      transparent 1px,
+      transparent 25%
+    ),
+    #fff;
+}
+
+.request-calendar-block {
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 0;
+  padding: 6px;
+  overflow: hidden;
+  border-radius: 5px;
+  text-align: center;
+}
+
+.request-calendar-block span,
+.request-calendar-block small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.request-calendar-block span {
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.request-calendar-block small {
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.request-calendar-block.available {
+  border: 1px solid #9dcdaa;
+  background: #dff0e2;
+  color: #174533;
+  cursor: pointer;
+}
+
+.request-calendar-block.available:hover,
+.request-calendar-block.available:focus-visible {
+  border-color: #2f8157;
+  background: #d2e8d7;
+  outline: none;
+}
+
+.request-calendar-block.available.disabled {
+  border-color: #d2cabd;
+  background: #eee8dc;
+  color: #6b6256;
+  cursor: not-allowed;
+}
+
+.request-calendar-block.booked {
+  border: 1px solid #e2a795;
+  background: #f6d9d0;
+  color: #7a2d16;
+}
+
+.request-calendar-empty,
+.request-calendar-empty-block,
+.request-calendar-note {
+  margin: 0;
+  color: #5c655f;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.request-calendar-empty {
+  padding: 12px;
+  border: 1px dashed #d6d0c7;
+  border-radius: 5px;
+  background: #fff;
+}
+
+.request-calendar-empty-block {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 8px;
+  text-align: center;
+}
+
+.request-calendar-note {
+  padding: 10px 12px;
+  border: 1px solid #eadfca;
+  border-radius: 5px;
+  background: #fffdf8;
+  color: #39433d;
+  font-weight: 700;
 }
 
 .request-confirmation-card {
@@ -1248,6 +1467,169 @@
   font-size: 28px;
 }
 
+.provider-empty-state.compact {
+  padding: 22px;
+}
+
+.provider-empty-state.compact h4 {
+  margin: 0 0 6px;
+  color: var(--deep);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 20px;
+}
+
+.account-payments-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.75fr);
+  gap: 18px;
+  align-items: start;
+}
+
+.account-payments-main,
+.account-payments-panel,
+.account-payments-group,
+.account-payment-list {
+  display: grid;
+  gap: 14px;
+}
+
+.account-payments-panel {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fffef9;
+  box-shadow: 0 12px 28px rgba(74, 51, 17, 0.09);
+}
+
+.account-payments-section-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.account-payments-section-heading h2 {
+  margin: 0 0 4px;
+  color: var(--deep);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 26px;
+  line-height: 1.1;
+}
+
+.account-payments-section-heading p,
+.account-payment-card p,
+.account-payout-status p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.account-payment-icon {
+  display: inline-grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff8e5;
+  color: var(--gold);
+}
+
+.account-payments-group h3 {
+  margin: 0;
+  color: var(--deep);
+  font-size: 18px;
+}
+
+.account-payment-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+}
+
+.account-payment-card.compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.account-payment-card-header,
+.account-payment-history-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.account-payment-card h3,
+.account-payout-status h3,
+.account-payment-requirements h3 {
+  margin: 6px 0 4px;
+  color: var(--deep);
+  font-size: 20px;
+}
+
+.account-payment-card-header > strong,
+.account-payment-history-actions > strong {
+  color: var(--deep);
+  font-size: 22px;
+  white-space: nowrap;
+}
+
+.account-payment-breakdown {
+  display: grid;
+  gap: 0;
+  margin: 0;
+}
+
+.account-payment-breakdown div {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 9px 0;
+  border-top: 1px solid var(--line);
+}
+
+.account-payment-breakdown dt,
+.account-payment-breakdown dd {
+  margin: 0;
+  line-height: 1.35;
+}
+
+.account-payment-breakdown dt {
+  color: var(--muted);
+}
+
+.account-payment-breakdown dd {
+  color: var(--deep);
+  font-weight: 750;
+  text-align: right;
+}
+
+.account-payout-status {
+  display: grid;
+  gap: 4px;
+}
+
+.account-payment-requirements {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: #fff;
+}
+
+.account-payment-requirements ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  color: var(--muted);
+}
+
 @media (max-width: 780px) {
   .auth-shell,
   .provider-shell,
@@ -1276,6 +1658,7 @@
   .provider-profile-facts,
   .request-confirmation-grid,
   .availability-day-row,
+  .account-payments-layout,
   .public-provider-card {
     grid-template-columns: 1fr;
   }
@@ -1287,6 +1670,9 @@
 
   .notification-toolbar,
   .provider-inbox-card-header,
+  .account-payment-card-header,
+  .account-payment-card.compact,
+  .account-payment-history-actions,
   .message-thread-header {
     align-items: flex-start;
     flex-direction: column;
@@ -1302,6 +1688,10 @@
 
   .provider-summary-card-wide {
     grid-column: auto;
+  }
+
+  .account-payment-card.compact {
+    grid-template-columns: 1fr;
   }
 
   .public-provider-photo {
@@ -2111,7 +2501,7 @@ textarea {
   border: 1px solid #ddd9d2;
   border-radius: 5px;
   background: #fff;
-  color: #8c8c8c;
+  color: #1f2824;
   padding: 0 12px;
   font-size: 13px;
   font-weight: 400;
@@ -2139,12 +2529,19 @@ textarea {
     5px 5px,
     2.5em 2.5em;
   background-repeat: no-repeat;
-  color: #39433d;
+  color: #1f2824;
 }
 
 .form-card textarea::placeholder,
 .form-card input::placeholder {
-  color: #8c8c8c;
+  color: #858b86;
+}
+
+.field-error {
+  color: #8f2f18;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
 }
 
 .sr-only {
@@ -2855,6 +3252,26 @@ textarea {
   .form-card {
     width: 100%;
     padding: 20px 16px;
+  }
+
+  .request-availability-calendar > header {
+    display: grid;
+  }
+
+  .request-calendar-legend {
+    justify-content: flex-start;
+  }
+
+  .request-calendar-track {
+    min-height: 76px;
+  }
+
+  .request-calendar-block {
+    padding: 5px 3px;
+  }
+
+  .request-calendar-block small {
+    display: none;
   }
 
   .account-photo-panel,

@@ -265,6 +265,7 @@ export default async function AccountRequestsPage({ searchParams }: AccountReque
         </Link>
         <nav className="provider-nav" aria-label="Account request navigation">
           <Link href="/account">Account</Link>
+          <Link href="/account/payments">Payments</Link>
           <Link className="notification-nav-link" href="/account/notifications">
             Notifications
             {unreadNotificationCount ? <span>{unreadNotificationCount}</span> : null}

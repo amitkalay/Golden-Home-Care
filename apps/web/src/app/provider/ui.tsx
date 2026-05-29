@@ -49,6 +49,7 @@ export function ProviderShell({
             {notificationCount ? <span>{notificationCount}</span> : null}
           </Link>
           <Link href="/providers">Public search</Link>
+          <Link href="/account/payments">Payments</Link>
           <Link href="/account">Account</Link>
           <SignOutButton className="nav-link-button" />
         </nav>
@@ -397,7 +398,9 @@ export function ProviderDashboardCards({ profile }: { profile: ProviderProfileRe
         <span>Payments</span>
         <strong>{stripeReady ? "Ready" : "Setup"}</strong>
         {stripeReady ? (
-          <p>Stripe test payments are enabled.</p>
+          <p>
+            <Link href="/account/payments">Manage payouts</Link>
+          </p>
         ) : (
           <form action={startStripeProviderOnboarding}>
             <button className="nav-link-button provider-card-action" type="submit">

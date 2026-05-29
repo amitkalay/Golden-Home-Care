@@ -130,6 +130,7 @@ export default async function AccountNotificationsPage({ searchParams }: Notific
         <nav className="provider-nav" aria-label="Account notification navigation">
           <Link href="/account">Account</Link>
           <Link href="/account/requests">My requests</Link>
+          <Link href="/account/payments">Payments</Link>
           <Link className="notification-nav-link" href="/account/notifications">
             Notifications
             {unreadCount ? <span>{unreadCount}</span> : null}

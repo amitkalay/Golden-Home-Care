@@ -34,6 +34,7 @@ export default async function DeleteAccountPage({ searchParams }: DeleteAccountP
         </Link>
         <nav className="provider-nav" aria-label="Account navigation">
           <Link href="/account">Account</Link>
+          <Link href="/account/payments">Payments</Link>
           <Link className="notification-nav-link" href="/account/notifications">
             Notifications
             {unreadNotificationCount ? <span>{unreadNotificationCount}</span> : null}
