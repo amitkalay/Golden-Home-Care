@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
 import Pusher from "pusher-js";
 import type { MessageRecord, MessageThreadRecord } from "./db";
@@ -97,8 +97,7 @@ export function MessageThread({ currentUserId, thread, initialMessages }: Messag
     };
   }, [canSubscribe, currentUserId, pusherCluster, pusherKey, thread.id]);
 
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function sendCurrentMessage() {
     const nextBody = body.trim();
 
     if (!nextBody || isSending || !thread.canSend) {
@@ -129,6 +128,24 @@ export function MessageThread({ currentUserId, thread, initialMessages }: Messag
     } finally {
       setIsSending(false);
     }
+  }
+
+  function sendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void sendCurrentMessage();
+  }
+
+  function handleMessageKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.nativeEvent.isComposing || event.keyCode === 229) {
+      return;
+    }
+
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    void sendCurrentMessage();
   }
 
   return (
@@ -181,6 +198,7 @@ export function MessageThread({ currentUserId, thread, initialMessages }: Messag
           Message
           <textarea
             maxLength={1000}
+            onKeyDown={handleMessageKeyDown}
             onChange={(event) => setBody(event.target.value)}
             placeholder={
               thread.canSend ? "Write a message..." : "This conversation is closed."

@@ -114,6 +114,14 @@ describe("realtime request messaging source checks", () => {
     assert.match(threadComponent, /private-message-thread-\$\{thread\.id\}/);
     assert.match(threadComponent, /\/api\/messages\/send/);
     assert.match(threadComponent, /\/api\/messages\/read/);
+    assert.match(threadComponent, /async function sendCurrentMessage\(\)/);
+    assert.match(threadComponent, /function sendMessage\(event: FormEvent<HTMLFormElement>\)/);
+    assert.match(threadComponent, /function handleMessageKeyDown\(event: KeyboardEvent<HTMLTextAreaElement>\)/);
+    assert.match(threadComponent, /event\.nativeEvent\.isComposing/);
+    assert.match(threadComponent, /event\.key !== "Enter" \|\| event\.shiftKey/);
+    assert.match(threadComponent, /event\.preventDefault\(\)/);
+    assert.match(threadComponent, /void sendCurrentMessage\(\)/);
+    assert.match(threadComponent, /onKeyDown=\{handleMessageKeyDown\}/);
     assert.match(threadComponent, /getThreadTransactionLine\(thread\)/);
     assert.match(threadComponent, /Request #\{thread\.serviceRequestId\}/);
     assert.doesNotMatch(threadComponent, /Request match #/);
