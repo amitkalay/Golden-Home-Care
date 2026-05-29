@@ -1,6 +1,12 @@
 import { ensureMessagingTables, getPool, getSql } from "../lib/database";
+import { providerServiceLabels } from "../provider/services.js";
 
 export type MessageThreadRole = "requester" | "provider";
+export type MessageRequestStatus = "submitted" | "payment_pending" | "confirmed" | "completed" | "canceled";
+export type MessageMatchStatus = "pending" | "proposed" | "accepted" | "declined" | "expired";
+export type MessageMatchSource = "weekly" | "on_demand";
+export type MessageBookingStatus = "payment_pending" | "confirmed" | "completed" | "canceled";
+
 export type MessageThreadRecord = {
   id: number;
   serviceRequestId: number;
@@ -9,8 +15,25 @@ export type MessageThreadRecord = {
   providerUserId: string;
   role: MessageThreadRole;
   otherParticipantName: string;
-  requestStatus: "submitted" | "confirmed" | "completed" | "canceled";
-  matchStatus: "pending" | "proposed" | "accepted" | "declined" | "expired";
+  requestStatus: MessageRequestStatus;
+  matchStatus: MessageMatchStatus;
+  serviceType: string;
+  serviceLabel: string;
+  zipCode: string;
+  requestedDate: string;
+  windowStartTime: string;
+  windowEndTime: string;
+  durationMinutes: number;
+  urgency: "urgent" | "soon" | "flexible";
+  matchSource: MessageMatchSource;
+  proposedDate: string | null;
+  proposedStartTime: string | null;
+  proposedEndTime: string | null;
+  bookingDate: string | null;
+  bookingStartTime: string | null;
+  bookingEndTime: string | null;
+  bookingStatus: MessageBookingStatus | null;
+  scheduledEndAt: string | null;
   canSend: boolean;
   unreadCount: number;
   requesterReadAt: string | null;
@@ -54,7 +77,12 @@ function toNullableIsoString(value: unknown) {
 }
 
 function normalizeRequestStatus(status: unknown): MessageThreadRecord["requestStatus"] {
-  if (status === "confirmed" || status === "completed" || status === "canceled") {
+  if (
+    status === "payment_pending" ||
+    status === "confirmed" ||
+    status === "completed" ||
+    status === "canceled"
+  ) {
     return status;
   }
 
@@ -72,6 +100,31 @@ function normalizeMatchStatus(status: unknown): MessageThreadRecord["matchStatus
   }
 
   return "pending";
+}
+
+function normalizeMatchSource(source: unknown): MessageMatchSource {
+  return source === "on_demand" ? "on_demand" : "weekly";
+}
+
+function normalizeUrgency(urgency: unknown): MessageThreadRecord["urgency"] {
+  if (urgency === "urgent" || urgency === "flexible") {
+    return urgency;
+  }
+
+  return "soon";
+}
+
+function normalizeBookingStatus(status: unknown): MessageBookingStatus | null {
+  if (
+    status === "payment_pending" ||
+    status === "confirmed" ||
+    status === "completed" ||
+    status === "canceled"
+  ) {
+    return status;
+  }
+
+  return null;
 }
 
 function canSendToThread(
@@ -103,6 +156,7 @@ function toMessageThreadRecord(row: Record<string, unknown>, userId: string): Me
   const matchStatus = normalizeMatchStatus(row.matchStatus);
   const providerName = String(row.providerDisplayName || row.providerAccountName || "Provider");
   const requesterName = String(row.requesterContactName || row.requesterAccountName || "Requester");
+  const serviceType = String(row.serviceType || "");
 
   return {
     id: Number(row.id),
@@ -114,6 +168,23 @@ function toMessageThreadRecord(row: Record<string, unknown>, userId: string): Me
     otherParticipantName: role === "requester" ? providerName : requesterName,
     requestStatus,
     matchStatus,
+    serviceType,
+    serviceLabel: providerServiceLabels.get(serviceType) ?? serviceType,
+    zipCode: String(row.zipCode || ""),
+    requestedDate: String(row.requestedDate || ""),
+    windowStartTime: String(row.windowStartTime || ""),
+    windowEndTime: String(row.windowEndTime || ""),
+    durationMinutes: Number(row.durationMinutes ?? 0),
+    urgency: normalizeUrgency(row.urgency),
+    matchSource: normalizeMatchSource(row.matchSource),
+    proposedDate: (row.proposedDate as string | null) ?? null,
+    proposedStartTime: (row.proposedStartTime as string | null) ?? null,
+    proposedEndTime: (row.proposedEndTime as string | null) ?? null,
+    bookingDate: (row.bookingDate as string | null) ?? null,
+    bookingStartTime: (row.bookingStartTime as string | null) ?? null,
+    bookingEndTime: (row.bookingEndTime as string | null) ?? null,
+    bookingStatus: normalizeBookingStatus(row.bookingStatus),
+    scheduledEndAt: toNullableIsoString(row.scheduledEndAt),
     canSend: canSendToThread(requestStatus, matchStatus),
     unreadCount: Number(row.unreadCount ?? 0),
     requesterReadAt: toNullableIsoString(row.requesterReadAt),
@@ -171,11 +242,27 @@ export async function getMessageThreadForUser(threadId: number, userId: string) 
       mt.provider_read_at as "providerReadAt",
       mt.updated_at as "updatedAt",
       sr.status as "requestStatus",
+      sr.service_type as "serviceType",
+      sr.zip_code as "zipCode",
+      to_char(sr.requested_date, 'YYYY-MM-DD') as "requestedDate",
+      to_char(sr.window_start_time, 'HH24:MI') as "windowStartTime",
+      to_char(sr.window_end_time, 'HH24:MI') as "windowEndTime",
+      sr.duration_minutes as "durationMinutes",
+      sr.urgency,
       sr.contact_name as "requesterContactName",
       requester.name as "requesterAccountName",
       rpm.status as "matchStatus",
+      rpm.match_source as "matchSource",
+      to_char(rpm.proposed_date, 'YYYY-MM-DD') as "proposedDate",
+      to_char(rpm.proposed_start_time, 'HH24:MI') as "proposedStartTime",
+      to_char(rpm.proposed_end_time, 'HH24:MI') as "proposedEndTime",
       p.display_name as "providerDisplayName",
       provider_user.name as "providerAccountName",
+      to_char(booking.booking_date, 'YYYY-MM-DD') as "bookingDate",
+      to_char(booking.start_time, 'HH24:MI') as "bookingStartTime",
+      to_char(booking.end_time, 'HH24:MI') as "bookingEndTime",
+      booking.status as "bookingStatus",
+      ((COALESCE(booking.booking_date, sr.requested_date) + COALESCE(booking.end_time, sr.window_end_time)) AT TIME ZONE 'America/Los_Angeles') as "scheduledEndAt",
       COALESCE(
         (
           SELECT count(*)::int
@@ -196,6 +283,20 @@ export async function getMessageThreadForUser(threadId: number, userId: string) 
     JOIN service_requests sr ON sr.id = mt.service_request_id
     JOIN request_provider_matches rpm ON rpm.id = mt.request_provider_match_id
     JOIN provider_profiles p ON p.id = rpm.provider_profile_id
+    LEFT JOIN LATERAL (
+      SELECT
+        sb.booking_date,
+        sb.start_time,
+        sb.end_time,
+        sb.status,
+        sb.created_at,
+        sb.id
+      FROM service_bookings sb
+      WHERE sb.service_request_id = sr.id
+        AND (sb.request_provider_match_id = rpm.id OR sb.provider_profile_id = p.id)
+      ORDER BY sb.created_at DESC, sb.id DESC
+      LIMIT 1
+    ) booking ON true
     LEFT JOIN users requester ON requester.id = mt.requester_user_id
     LEFT JOIN users provider_user ON provider_user.id = mt.provider_user_id
     WHERE mt.id = ${threadId}
@@ -265,11 +366,27 @@ export async function getMessageInboxThreadBundlesForUser(userId: string) {
       mt.provider_read_at as "providerReadAt",
       mt.updated_at as "updatedAt",
       sr.status as "requestStatus",
+      sr.service_type as "serviceType",
+      sr.zip_code as "zipCode",
+      to_char(sr.requested_date, 'YYYY-MM-DD') as "requestedDate",
+      to_char(sr.window_start_time, 'HH24:MI') as "windowStartTime",
+      to_char(sr.window_end_time, 'HH24:MI') as "windowEndTime",
+      sr.duration_minutes as "durationMinutes",
+      sr.urgency,
       sr.contact_name as "requesterContactName",
       requester.name as "requesterAccountName",
       rpm.status as "matchStatus",
+      rpm.match_source as "matchSource",
+      to_char(rpm.proposed_date, 'YYYY-MM-DD') as "proposedDate",
+      to_char(rpm.proposed_start_time, 'HH24:MI') as "proposedStartTime",
+      to_char(rpm.proposed_end_time, 'HH24:MI') as "proposedEndTime",
       p.display_name as "providerDisplayName",
       provider_user.name as "providerAccountName",
+      to_char(booking.booking_date, 'YYYY-MM-DD') as "bookingDate",
+      to_char(booking.start_time, 'HH24:MI') as "bookingStartTime",
+      to_char(booking.end_time, 'HH24:MI') as "bookingEndTime",
+      booking.status as "bookingStatus",
+      ((COALESCE(booking.booking_date, sr.requested_date) + COALESCE(booking.end_time, sr.window_end_time)) AT TIME ZONE 'America/Los_Angeles') as "scheduledEndAt",
       latest_message.id as "latestMessageId",
       latest_message.message_thread_id as "latestMessageThreadId",
       latest_message.sender_user_id as "latestMessageSenderUserId",
@@ -295,6 +412,20 @@ export async function getMessageInboxThreadBundlesForUser(userId: string) {
     JOIN service_requests sr ON sr.id = mt.service_request_id
     JOIN request_provider_matches rpm ON rpm.id = mt.request_provider_match_id
     JOIN provider_profiles p ON p.id = rpm.provider_profile_id
+    LEFT JOIN LATERAL (
+      SELECT
+        sb.booking_date,
+        sb.start_time,
+        sb.end_time,
+        sb.status,
+        sb.created_at,
+        sb.id
+      FROM service_bookings sb
+      WHERE sb.service_request_id = sr.id
+        AND (sb.request_provider_match_id = rpm.id OR sb.provider_profile_id = p.id)
+      ORDER BY sb.created_at DESC, sb.id DESC
+      LIMIT 1
+    ) booking ON true
     LEFT JOIN users requester ON requester.id = mt.requester_user_id
     LEFT JOIN users provider_user ON provider_user.id = mt.provider_user_id
     LEFT JOIN LATERAL (
@@ -423,16 +554,46 @@ export async function insertMessageForUser(threadId: number, userId: string, bod
           mt.provider_read_at as "providerReadAt",
           mt.updated_at as "updatedAt",
           sr.status as "requestStatus",
+          sr.service_type as "serviceType",
+          sr.zip_code as "zipCode",
+          to_char(sr.requested_date, 'YYYY-MM-DD') as "requestedDate",
+          to_char(sr.window_start_time, 'HH24:MI') as "windowStartTime",
+          to_char(sr.window_end_time, 'HH24:MI') as "windowEndTime",
+          sr.duration_minutes as "durationMinutes",
+          sr.urgency,
           sr.contact_name as "requesterContactName",
           requester.name as "requesterAccountName",
           rpm.status as "matchStatus",
+          rpm.match_source as "matchSource",
+          to_char(rpm.proposed_date, 'YYYY-MM-DD') as "proposedDate",
+          to_char(rpm.proposed_start_time, 'HH24:MI') as "proposedStartTime",
+          to_char(rpm.proposed_end_time, 'HH24:MI') as "proposedEndTime",
           p.display_name as "providerDisplayName",
           provider_user.name as "providerAccountName",
+          to_char(booking.booking_date, 'YYYY-MM-DD') as "bookingDate",
+          to_char(booking.start_time, 'HH24:MI') as "bookingStartTime",
+          to_char(booking.end_time, 'HH24:MI') as "bookingEndTime",
+          booking.status as "bookingStatus",
+          ((COALESCE(booking.booking_date, sr.requested_date) + COALESCE(booking.end_time, sr.window_end_time)) AT TIME ZONE 'America/Los_Angeles') as "scheduledEndAt",
           0 as "unreadCount"
         FROM message_threads mt
         JOIN service_requests sr ON sr.id = mt.service_request_id
         JOIN request_provider_matches rpm ON rpm.id = mt.request_provider_match_id
         JOIN provider_profiles p ON p.id = rpm.provider_profile_id
+        LEFT JOIN LATERAL (
+          SELECT
+            sb.booking_date,
+            sb.start_time,
+            sb.end_time,
+            sb.status,
+            sb.created_at,
+            sb.id
+          FROM service_bookings sb
+          WHERE sb.service_request_id = sr.id
+            AND (sb.request_provider_match_id = rpm.id OR sb.provider_profile_id = p.id)
+          ORDER BY sb.created_at DESC, sb.id DESC
+          LIMIT 1
+        ) booking ON true
         LEFT JOIN users requester ON requester.id = mt.requester_user_id
         LEFT JOIN users provider_user ON provider_user.id = mt.provider_user_id
         WHERE mt.id = $1

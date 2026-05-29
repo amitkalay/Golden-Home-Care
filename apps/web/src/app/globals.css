@@ -799,6 +799,44 @@
   color: #8a2f1c;
 }
 
+.thread-status-badge {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.thread-status-badge.status-complete {
+  background: #e7f6ea;
+  color: #256534;
+}
+
+.thread-status-badge.status-attention {
+  background: #fff1ce;
+  color: #7a4f00;
+}
+
+.thread-status-badge.status-accepted {
+  background: #eaf2f8;
+  color: #23527a;
+}
+
+.thread-status-badge.status-pending {
+  background: #eef4ea;
+  color: var(--deep-2);
+}
+
+.thread-status-badge.status-closed {
+  background: #f5e7e3;
+  color: #8a2f1c;
+}
+
 .provider-inbox-facts {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -877,8 +915,21 @@
   gap: 12px;
 }
 
+.message-thread-heading {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.message-thread-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
 .message-thread-header h3 {
-  margin: 0 0 3px;
+  margin: 0;
   color: var(--deep);
   font-size: 16px;
 }
@@ -889,6 +940,14 @@
   margin: 0;
   color: var(--muted);
   line-height: 1.45;
+}
+
+.message-thread-transaction {
+  font-weight: 750;
+}
+
+.message-thread-details {
+  font-size: 13px;
 }
 
 .message-list {
@@ -1516,17 +1575,23 @@ textarea {
 }
 
 .inbox-filters {
-  display: flex;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
   overflow-x: auto;
 }
 
 .inbox-filters button {
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 38px;
+  border: 1px solid #46504d;
+  border-radius: 8px;
+  background: #252b29;
   color: #dfe7e4;
-  padding: 9px 15px;
+  padding: 8px 11px;
   font: inherit;
   font-size: 14px;
   font-weight: 850;
@@ -1534,8 +1599,26 @@ textarea {
 }
 
 .inbox-filters button.active {
-  background: #1d3f68;
-  color: #87bdff;
+  border-color: #d29a22;
+  background: #392c12;
+  color: #ffe4a3;
+}
+
+.inbox-filters button span {
+  display: inline-grid;
+  min-width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: 999px;
+  background: #343a38;
+  color: #b9c2be;
+  padding: 0 6px;
+  font-size: 11px;
+}
+
+.inbox-filters button.active span {
+  background: #d29a22;
+  color: #1c211f;
 }
 
 .inbox-body {
@@ -1545,7 +1628,7 @@ textarea {
 }
 
 .inbox-body.has-selection {
-  grid-template-columns: minmax(230px, 0.8fr) minmax(0, 1.2fr);
+  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
   gap: 14px;
 }
 
@@ -1564,14 +1647,14 @@ textarea {
 .inbox-thread-row {
   display: grid;
   grid-template-columns: 48px minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: start;
   gap: 12px;
   width: 100%;
   border: 0;
-  border-radius: 12px;
+  border-radius: 14px;
   background: transparent;
   color: inherit;
-  padding: 10px 8px;
+  padding: 12px 10px;
   text-align: left;
   cursor: pointer;
 }
@@ -1598,7 +1681,7 @@ textarea {
 .inbox-thread-copy {
   display: grid;
   min-width: 0;
-  gap: 4px;
+  gap: 5px;
 }
 
 .inbox-thread-copy strong {
@@ -1611,13 +1694,32 @@ textarea {
   white-space: nowrap;
 }
 
-.inbox-thread-copy span {
+.inbox-thread-preview,
+.inbox-thread-transaction,
+.inbox-thread-detail {
   overflow: hidden;
-  color: #b9c2be;
-  font-size: 14px;
-  line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.inbox-thread-preview {
+  color: #c9d1ce;
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.inbox-thread-transaction {
+  color: #f0f4f2;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.inbox-thread-detail {
+  color: #9fb0aa;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.25;
 }
 
 .inbox-thread-meta {
@@ -1627,6 +1729,31 @@ textarea {
   color: #b9c2be;
   font-size: 12px;
   font-weight: 750;
+}
+
+.inbox-thread-meta .thread-status-badge.status-complete {
+  background: #dff4df;
+  color: #1d6a33;
+}
+
+.inbox-thread-meta .thread-status-badge.status-attention {
+  background: #ffe2a3;
+  color: #6d4700;
+}
+
+.inbox-thread-meta .thread-status-badge.status-accepted {
+  background: #d9edf9;
+  color: #1f5578;
+}
+
+.inbox-thread-meta .thread-status-badge.status-pending {
+  background: #e6ece8;
+  color: #2d4c40;
+}
+
+.inbox-thread-meta .thread-status-badge.status-closed {
+  background: #f1d8d1;
+  color: #87311d;
 }
 
 .inbox-thread-unread {
@@ -1693,6 +1820,10 @@ textarea {
 .inbox-conversation .message-empty,
 .inbox-conversation .message-thread .message-error {
   color: #aeb8b4;
+}
+
+.inbox-conversation .message-thread-transaction {
+  color: #f0f4f2;
 }
 
 .inbox-conversation .message-list {
@@ -2580,6 +2711,10 @@ textarea {
     font-size: 28px;
   }
 
+  .inbox-filters {
+    grid-template-columns: repeat(3, minmax(108px, 1fr));
+  }
+
   .inbox-body.has-selection {
     grid-template-columns: 1fr;
   }
@@ -2590,6 +2725,30 @@ textarea {
 
   .inbox-thread-list {
     max-height: calc(100vh - 310px);
+  }
+
+  .inbox-thread-row {
+    grid-template-columns: 42px minmax(0, 1fr);
+  }
+
+  .inbox-thread-avatar {
+    width: 42px;
+    height: 42px;
+    font-size: 14px;
+  }
+
+  .inbox-thread-meta {
+    grid-column: 2;
+    grid-row: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+  }
+
+  .inbox-thread-transaction,
+  .inbox-thread-detail {
+    white-space: normal;
   }
 
   .inbox-back-button {

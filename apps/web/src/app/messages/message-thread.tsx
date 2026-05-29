@@ -1,9 +1,15 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
 import Pusher from "pusher-js";
 import type { MessageRecord, MessageThreadRecord } from "./db";
+import {
+  getThreadDetailLine,
+  getThreadStatusLabel,
+  getThreadStatusTone,
+  getThreadTransactionLine,
+} from "./thread-metadata";
 
 type MessageThreadProps = {
   currentUserId: string;
@@ -37,6 +43,7 @@ export function MessageThread({ currentUserId, thread, initialMessages }: Messag
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState("");
   const [displayUnreadCount, setDisplayUnreadCount] = useState(thread.unreadCount);
+  const statusTone = getThreadStatusTone(thread);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY || "";
   const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "";
@@ -90,8 +97,7 @@ export function MessageThread({ currentUserId, thread, initialMessages }: Messag
     };
   }, [canSubscribe, currentUserId, pusherCluster, pusherKey, thread.id]);
 
-  async function sendMessage(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  async function sendCurrentMessage() {
     const nextBody = body.trim();
 
     if (!nextBody || isSending || !thread.canSend) {
@@ -124,12 +130,38 @@ export function MessageThread({ currentUserId, thread, initialMessages }: Messag
     }
   }
 
+  function sendMessage(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    void sendCurrentMessage();
+  }
+
+  function handleMessageKeyDown(event: KeyboardEvent<HTMLTextAreaElement>) {
+    if (event.nativeEvent.isComposing || event.keyCode === 229) {
+      return;
+    }
+
+    if (event.key !== "Enter" || event.shiftKey) {
+      return;
+    }
+
+    event.preventDefault();
+    void sendCurrentMessage();
+  }
+
   return (
     <section className="message-thread" aria-label={`Messages with ${thread.otherParticipantName}`}>
       <header className="message-thread-header">
-        <div>
-          <h3>Messages with {thread.otherParticipantName}</h3>
-          <p>Request match #{thread.requestProviderMatchId}</p>
+        <div className="message-thread-heading">
+          <div className="message-thread-title-row">
+            <h3>Messages with {thread.otherParticipantName}</h3>
+            <span className={`thread-status-badge status-${statusTone}`}>
+              {getThreadStatusLabel(thread)}
+            </span>
+          </div>
+          <p className="message-thread-transaction">{getThreadTransactionLine(thread)}</p>
+          <p className="message-thread-details">
+            {getThreadDetailLine(thread)} · Request #{thread.serviceRequestId} · Match #{thread.requestProviderMatchId}
+          </p>
         </div>
         {displayUnreadCount ? (
           <span className="provider-status-badge status-proposed">
@@ -166,6 +198,7 @@ export function MessageThread({ currentUserId, thread, initialMessages }: Messag
           Message
           <textarea
             maxLength={1000}
+            onKeyDown={handleMessageKeyDown}
             onChange={(event) => setBody(event.target.value)}
             placeholder={
               thread.canSend ? "Write a message..." : "This conversation is closed."
