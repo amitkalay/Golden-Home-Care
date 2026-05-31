@@ -170,12 +170,13 @@ export async function refreshProviderStripeAccountForUser(userId: string) {
 }
 
 type ProviderStripeAccountLinkOptions = {
+  baseUrl?: string;
   returnPath?: string;
   refreshPath?: string;
 };
 
-function getAppUrl(path: string) {
-  const appBaseUrl = getAppBaseUrl();
+function getAppUrl(path: string, baseUrl?: string) {
+  const appBaseUrl = (baseUrl || getAppBaseUrl()).replace(/\/$/, "");
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
 
   return `${appBaseUrl}${normalizedPath}`;
@@ -187,8 +188,10 @@ export async function createProviderStripeAccountLink(
 ) {
   const sql = getSql();
   const stripe = getStripe();
+  const baseUrl = options.baseUrl;
   const returnPath = options.returnPath ?? "/provider?stripe=returned";
-  const refreshPath = options.refreshPath ?? "/provider?stripe=refresh";
+  const refreshPath =
+    options.refreshPath ?? "/payments/stripe/connect/refresh?destination=provider";
 
   await ensureProviderTables();
   const rows = await sql`
@@ -255,8 +258,8 @@ export async function createProviderStripeAccountLink(
 
   const accountLink = await stripe.accountLinks.create({
     account: stripeAccountId,
-    refresh_url: getAppUrl(refreshPath),
-    return_url: getAppUrl(returnPath),
+    refresh_url: getAppUrl(refreshPath, baseUrl),
+    return_url: getAppUrl(returnPath, baseUrl),
     type: "account_onboarding",
   });
 

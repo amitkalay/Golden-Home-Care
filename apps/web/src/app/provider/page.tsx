@@ -68,6 +68,16 @@ export default async function ProviderPage({ searchParams }: ProviderPageProps) 
           Stripe setup needs another attempt before payments can be accepted.
         </p>
       ) : null}
+      {stripeStatus === "connect-disabled" ? (
+        <p className="form-alert error" role="alert">
+          Stripe Connect is not enabled for this Stripe test account. Enable Connect in Stripe, then start setup again.
+        </p>
+      ) : null}
+      {stripeStatus === "config" || stripeStatus === "setup-error" ? (
+        <p className="form-alert error" role="alert">
+          Stripe setup could not start. Check the test payment configuration and try again.
+        </p>
+      ) : null}
       <ProviderDashboardCards profile={profile} />
     </ProviderShell>
   );

@@ -1,27 +1,26 @@
 "use server";
 
-import { getServerSession } from "next-auth";
 import { redirect } from "next/navigation";
-import { authOptions } from "../../lib/auth";
+import { requireUser } from "../../lib/auth";
 import { createProviderStripeAccountLink } from "../../payments/db";
+import { getCurrentRequestBaseUrl } from "../../payments/request-url";
+import { getStripeConnectSetupStatus } from "../../payments/stripe-errors";
+import { ensureDraftProviderProfile } from "../../provider/db";
 
 export async function startAccountStripeProviderOnboarding() {
-  const session = await getServerSession(authOptions);
-  const userId = session?.user?.id;
-
-  if (!userId) {
-    redirect("/sign-in");
-  }
+  const user = await requireUser();
 
   let onboardingUrl: string;
   try {
-    onboardingUrl = await createProviderStripeAccountLink(userId, {
+    await ensureDraftProviderProfile(user.id, user.name);
+    onboardingUrl = await createProviderStripeAccountLink(user.id, {
+      baseUrl: await getCurrentRequestBaseUrl(),
       returnPath: "/account/payments?stripe=returned",
-      refreshPath: "/account/payments?stripe=refresh",
+      refreshPath: "/payments/stripe/connect/refresh?destination=account",
     });
   } catch (error) {
     console.error("Failed to create account Stripe provider onboarding link", error);
-    redirect("/account/payments?stripe=error");
+    redirect(`/account/payments?stripe=${getStripeConnectSetupStatus(error)}`);
   }
 
   redirect(onboardingUrl);
