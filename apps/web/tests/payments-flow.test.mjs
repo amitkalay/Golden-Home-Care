@@ -87,6 +87,7 @@ describe("Stripe Connect payment source checks", () => {
     assert.match(paymentsPage, /Provider payouts/);
     assert.match(paymentsPage, /payForServiceRequest/);
     assert.match(paymentsPage, /stripeRequirementsCurrentlyDue/);
+    assert.match(paymentsPage, /\[\.\.\.new Set\(profile\?\.stripeRequirementsCurrentlyDue \?\? \[\]\)\]/);
     assert.match(paymentsPage, /Stripe Connect is not enabled/);
     assert.match(accountPaymentsActions, /startAccountStripeProviderOnboarding/);
     assert.match(accountPaymentsActions, /ensureDraftProviderProfile/);
@@ -110,6 +111,8 @@ describe("Stripe Connect payment source checks", () => {
     assert.match(providerUi, /\/account\/payments/);
     assert.match(stripeErrors, /signed up for Connect/);
     assert.match(stripeErrors, /connect-disabled/);
+    assert.match(paymentsDb, /function uniqueRequirements/);
+    assert.match(paymentsDb, /stripeRequirementsCurrentlyDue: uniqueRequirements/);
     assert.doesNotMatch(paymentsPage, /NEXT_STRIPE_PUBLISHABLE_KEY|Stripe Elements|saved card/i);
     assert.doesNotMatch(accountPaymentsActions, /NEXT_STRIPE_PUBLISHABLE_KEY/);
   });
@@ -119,6 +122,7 @@ describe("Stripe Connect payment source checks", () => {
       new URL("../src/app/payments/stripe/connect/refresh/route.ts", import.meta.url),
       "utf8",
     );
+    const requestUrlHelper = await readFile(new URL("../src/app/payments/request-url.ts", import.meta.url), "utf8");
     const providerActions = await readFile(new URL("../src/app/provider/actions.ts", import.meta.url), "utf8");
     const providerPage = await readFile(new URL("../src/app/provider/page.tsx", import.meta.url), "utf8");
 
@@ -132,6 +136,12 @@ describe("Stripe Connect payment source checks", () => {
     assert.match(connectRefreshRoute, /returnPath: "\/provider\?stripe=returned"/);
     assert.match(connectRefreshRoute, /NextResponse\.redirect\(onboardingUrl\)/);
     assert.doesNotMatch(connectRefreshRoute, /account\/payments\?stripe=refresh|provider\?stripe=refresh/);
+    assert.match(requestUrlHelper, /process\.env\.APP_BASE_URL/);
+    assert.match(requestUrlHelper, /process\.env\.NODE_ENV !== "production"/);
+    assert.match(requestUrlHelper, /isLocalBaseUrl\(requestBaseUrl\)/);
+    assert.match(requestUrlHelper, /if \(process\.env\.NODE_ENV === "production"\)/);
+    assert.match(requestUrlHelper, /return configuredBaseUrl \|\| undefined/);
+    assert.match(requestUrlHelper, /return configuredBaseUrl \|\| requestBaseUrl \|\| undefined/);
     assert.match(providerActions, /baseUrl: await getCurrentRequestBaseUrl\(\)/);
     assert.match(
       providerActions,

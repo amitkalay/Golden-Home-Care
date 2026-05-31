@@ -232,7 +232,7 @@ function getPayoutState(profile: ProviderProfileRecord | null) {
 
 function ProviderPayoutPanel({ profile }: { profile: ProviderProfileRecord | null }) {
   const payoutState = getPayoutState(profile);
-  const requirements = profile?.stripeRequirementsCurrentlyDue ?? [];
+  const requirements = [...new Set(profile?.stripeRequirementsCurrentlyDue ?? [])];
 
   return (
     <section className="account-payments-panel" aria-labelledby="provider-payouts-heading">

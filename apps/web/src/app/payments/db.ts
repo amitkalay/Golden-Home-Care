@@ -109,6 +109,10 @@ function getSessionPaymentId(session: Stripe.Checkout.Session) {
   return Number.isInteger(paymentId) && paymentId > 0 ? paymentId : null;
 }
 
+function uniqueRequirements(requirements: string[]) {
+  return [...new Set(requirements)];
+}
+
 function getConnectedAccountState(account: Stripe.Account) {
   const currentlyDue = account.requirements?.currently_due ?? [];
   const pastDue = account.requirements?.past_due ?? [];
@@ -118,7 +122,7 @@ function getConnectedAccountState(account: Stripe.Account) {
     stripeChargesEnabled: Boolean(account.charges_enabled),
     stripePayoutsEnabled: Boolean(account.payouts_enabled),
     stripeOnboardingComplete: Boolean(account.details_submitted && account.charges_enabled),
-    stripeRequirementsCurrentlyDue: [...currentlyDue, ...pastDue],
+    stripeRequirementsCurrentlyDue: uniqueRequirements([...currentlyDue, ...pastDue]),
   };
 }
 
@@ -244,10 +248,10 @@ export async function createProviderStripeAccountLink(
         stripe_charges_enabled = ${Boolean(account.charges_enabled)},
         stripe_payouts_enabled = ${Boolean(account.payouts_enabled)},
         stripe_onboarding_complete = ${Boolean(account.details_submitted && account.charges_enabled)},
-        stripe_requirements_currently_due = ${[
+        stripe_requirements_currently_due = ${uniqueRequirements([
           ...(account.requirements?.currently_due ?? []),
           ...(account.requirements?.past_due ?? []),
-        ]},
+        ])},
         stripe_account_updated_at = now(),
         updated_at = now()
       WHERE user_id = ${userId}
