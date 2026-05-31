@@ -6,6 +6,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { authOptions } from "../lib/auth";
 import { createProviderStripeAccountLink } from "../payments/db";
+import { getCurrentRequestBaseUrl } from "../payments/request-url";
+import { getStripeConnectSetupStatus } from "../payments/stripe-errors";
 import {
   parseProviderAvailabilityForm,
   parseProviderProfileForm,
@@ -119,10 +121,14 @@ export async function startStripeProviderOnboarding() {
 
   let onboardingUrl: string;
   try {
-    onboardingUrl = await createProviderStripeAccountLink(userId);
+    onboardingUrl = await createProviderStripeAccountLink(userId, {
+      baseUrl: await getCurrentRequestBaseUrl(),
+      returnPath: "/provider?stripe=returned",
+      refreshPath: "/payments/stripe/connect/refresh?destination=provider",
+    });
   } catch (error) {
     console.error("Failed to create Stripe provider onboarding link", error);
-    redirect("/provider?stripe=error");
+    redirect(`/provider?stripe=${getStripeConnectSetupStatus(error)}`);
   }
 
   redirect(onboardingUrl);

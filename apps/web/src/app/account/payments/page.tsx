@@ -67,10 +67,34 @@ function getStripeStatusMessage(status?: string) {
     };
   }
 
-  if (status === "refresh" || status === "error") {
+  if (status === "refresh") {
     return {
       className: "form-alert error",
-      copy: "Stripe payout setup needs another attempt.",
+      copy: "That Stripe onboarding link expired. Start payout setup again to create a fresh link.",
+      role: "alert" as const,
+    };
+  }
+
+  if (status === "config") {
+    return {
+      className: "form-alert error",
+      copy: "Stripe test payouts are not fully configured on the server yet.",
+      role: "alert" as const,
+    };
+  }
+
+  if (status === "connect-disabled") {
+    return {
+      className: "form-alert error",
+      copy: "Stripe Connect is not enabled for this Stripe test account. Enable Connect in Stripe, then start payout setup again.",
+      role: "alert" as const,
+    };
+  }
+
+  if (status === "setup-error" || status === "error") {
+    return {
+      className: "form-alert error",
+      copy: "We could not start Stripe payout setup. Try again in a moment.",
       role: "alert" as const,
     };
   }
@@ -208,7 +232,7 @@ function getPayoutState(profile: ProviderProfileRecord | null) {
 
 function ProviderPayoutPanel({ profile }: { profile: ProviderProfileRecord | null }) {
   const payoutState = getPayoutState(profile);
-  const requirements = profile?.stripeRequirementsCurrentlyDue ?? [];
+  const requirements = [...new Set(profile?.stripeRequirementsCurrentlyDue ?? [])];
 
   return (
     <section className="account-payments-panel" aria-labelledby="provider-payouts-heading">
