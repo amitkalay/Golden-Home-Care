@@ -104,6 +104,47 @@ async function createAuthTables() {
       primary key (identifier, token)
     )
   `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS user_passwords (
+      user_id text primary key references users(id) on delete cascade,
+      password_hash text not null,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS pending_password_signups (
+      email text primary key,
+      name text not null,
+      password_hash text not null,
+      verification_token_hash text not null unique,
+      expires_at timestamptz not null,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      user_id text primary key references users(id) on delete cascade,
+      token_hash text not null unique,
+      expires_at timestamptz not null,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS pending_password_signups_expires_idx
+    ON pending_password_signups(expires_at)
+  `;
+
+  await sql`
+    CREATE INDEX IF NOT EXISTS password_reset_tokens_expires_idx
+    ON password_reset_tokens(expires_at)
+  `;
 }
 
 export async function ensureProviderTables() {

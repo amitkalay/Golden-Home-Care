@@ -34,7 +34,7 @@ describe("homepage", () => {
     assert.ok(homepage.includes('href="/providers"'));
     assert.ok(homepage.includes('"/sign-in?callbackUrl=/provider/onboarding"'));
     assert.match(homepage, /Hello, \{userName\}/);
-    assert.match(homepage, /callbackUrl="\/"/);
+    assert.ok(homepage.includes('href="/sign-in"'));
     assert.match(homepage, /getMessageInboxThreadBundlesForUser/);
     assert.match(homepage, /<InboxPopover currentUserId=\{session\.user\.id\} initialThreads=\{inboxThreads\} \/>/);
     assert.equal(homepage.includes('<Link className="nav-link-button" href="/provider">'), false);
