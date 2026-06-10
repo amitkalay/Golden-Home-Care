@@ -21,7 +21,6 @@ import { getCurrentUserSession } from "./lib/auth";
 import { getMessageInboxThreadBundlesForUser } from "./messages/db";
 import { InboxPopover } from "./messages/inbox-popover";
 import { getNextUpcomingVisitForUser } from "./requests/db";
-import { GoogleSignInButton } from "./sign-in/google-sign-in-button";
 import { SignOutButton } from "./sign-out-button";
 import { UpcomingVisitCard } from "./upcoming-visit-card";
 
@@ -121,11 +120,9 @@ export default async function HomePage() {
               <SignOutButton className="nav-link-button" />
             </>
           ) : (
-            <GoogleSignInButton
-              callbackUrl="/"
-              className="button button-primary nav-auth-button"
-              label="Sign In"
-            />
+            <Link className="button button-primary nav-auth-button" href="/sign-in">
+              Sign In
+            </Link>
           )}
         </div>
       </header>
