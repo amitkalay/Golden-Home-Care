@@ -8,7 +8,7 @@ export const inboxLifecycleTabs: Array<{ value: InboxLifecycleTab; label: string
   { value: "past", label: "Past" },
 ];
 
-function formatDate(value: string) {
+export function formatThreadDate(value: string) {
   const [year, month, day] = value.split("-").map((part) => Number.parseInt(part, 10));
   const date = new Date(Date.UTC(year, month - 1, day));
 
@@ -22,7 +22,7 @@ function formatDate(value: string) {
   }).format(date);
 }
 
-function formatTime(value: string) {
+export function formatThreadTime(value: string) {
   const [hourInput, minute = "00"] = value.split(":");
   const hour = Number.parseInt(hourInput, 10);
 
@@ -113,9 +113,9 @@ export function getThreadLifecycleTab(thread: MessageThreadRecord): InboxLifecyc
 export function getThreadTransactionLine(thread: MessageThreadRecord) {
   const schedule = getThreadSchedule(thread);
 
-  return `${thread.serviceLabel || "Service"} · ${formatDate(schedule.date)} · ${formatTime(
+  return `${thread.serviceLabel || "Service"} · ${formatThreadDate(schedule.date)} · ${formatThreadTime(
     schedule.startTime,
-  )} - ${formatTime(schedule.endTime)}`;
+  )} - ${formatThreadTime(schedule.endTime)}`;
 }
 
 export function getThreadDetailLine(thread: MessageThreadRecord) {

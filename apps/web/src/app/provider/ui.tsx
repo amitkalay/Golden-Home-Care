@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, CalendarCheck2, CreditCard, MessageCircle, Search, UserRound } from "lucide-react";
+import { ServiceLabel } from "./service-label";
 import { providerServiceOptions } from "./services.js";
 import type { ProviderProfileRecord } from "./db";
 import { SignOutButton } from "../sign-out-button";
@@ -207,7 +208,12 @@ export function ProviderProfileForm({
               value={option.value}
               defaultChecked={selectedServices.has(option.value)}
             />
-            <span>{option.label}</span>
+            <ServiceLabel
+              label={option.label}
+              serviceType={option.value}
+              showSuggested={option.suggested}
+              tooltipFocusable={false}
+            />
           </label>
         ))}
       </fieldset>

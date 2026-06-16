@@ -22,6 +22,7 @@ import {
   type ProviderRequestMatchStatus,
 } from "../db";
 import { getTodayDateString } from "../request-validation.js";
+import { ServiceLabel } from "../service-label";
 import { ProviderShell } from "../ui";
 
 export const dynamic = "force-dynamic";
@@ -144,7 +145,9 @@ function RequestCard({
           <span className={`provider-status-badge status-${request.matchStatus}`}>
             {getStatusLabel(request.matchStatus)}
           </span>
-          <h2>{request.serviceLabel}</h2>
+          <h2>
+            <ServiceLabel label={request.serviceLabel} serviceType={request.serviceType} />
+          </h2>
           <p>
             Request #{request.requestId} from {request.contactName}
           </p>

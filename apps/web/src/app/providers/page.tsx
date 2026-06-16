@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { BadgeCheck, CalendarClock, Car, Languages, MapPin, Search } from "lucide-react";
+import { ServiceInfoTooltip, ServiceLabel } from "../provider/service-label";
 import { providerServiceOptions } from "../provider/services.js";
 import { searchProviderProfiles } from "../provider/db";
 
@@ -75,7 +76,10 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
           <input name="zip" type="text" placeholder="94107" defaultValue={zip ?? ""} inputMode="numeric" />
         </label>
         <label>
-          Service
+          <span className="field-label-row">
+            Service
+            <ServiceInfoTooltip label="Medical Companion" serviceType="medical_companion" />
+          </span>
           <select name="service" defaultValue={service ?? ""}>
             <option value="">All services</option>
             {providerServiceOptions.map((option) => (
@@ -135,7 +139,9 @@ export default async function ProvidersPage({ searchParams }: ProvidersPageProps
                   <p>{provider.bio}</p>
                   <div className="provider-chip-row">
                     {provider.services.map((item) => (
-                      <span key={item.serviceType}>{item.label}</span>
+                      <span className="provider-service-chip" key={item.serviceType}>
+                        <ServiceLabel label={item.label} serviceType={item.serviceType} />
+                      </span>
                     ))}
                   </div>
                   <dl className="provider-profile-facts">

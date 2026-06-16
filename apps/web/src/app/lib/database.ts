@@ -247,6 +247,19 @@ async function createProviderTables() {
   `;
 
   await sql`
+    DELETE FROM provider_services old_service
+    USING provider_services new_service
+    WHERE old_service.service_type = 'companionship'
+      AND new_service.service_type = 'medical_companion'
+      AND old_service.provider_profile_id = new_service.provider_profile_id
+  `;
+  await sql`
+    UPDATE provider_services
+    SET service_type = 'medical_companion'
+    WHERE service_type = 'companionship'
+  `;
+
+  await sql`
     CREATE TABLE IF NOT EXISTS provider_availability_windows (
       id bigint generated always as identity primary key,
       provider_profile_id bigint not null references provider_profiles(id) on delete cascade,
@@ -324,6 +337,11 @@ async function createServiceRequestTables() {
     ADD CONSTRAINT service_requests_status_check check (
       status in ('submitted', 'payment_pending', 'confirmed', 'completed', 'canceled')
     )
+  `;
+  await sql`
+    UPDATE service_requests
+    SET service_type = 'medical_companion'
+    WHERE service_type = 'companionship'
   `;
 
   await sql`

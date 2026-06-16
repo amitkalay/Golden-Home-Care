@@ -20,6 +20,7 @@ import {
 import { getCurrentUserSession } from "./lib/auth";
 import { getMessageInboxThreadBundlesForUser } from "./messages/db";
 import { InboxPopover } from "./messages/inbox-popover";
+import { ServiceLabel } from "./provider/service-label";
 import { getNextUpcomingVisitForUser } from "./requests/db";
 import { SignOutButton } from "./sign-out-button";
 import { UpcomingVisitCard } from "./upcoming-visit-card";
@@ -28,9 +29,10 @@ export const dynamic = "force-dynamic";
 
 const services = [
   {
-    title: "Companionship",
-    copy: "Friendly conversation and meaningful connection.",
+    title: "Medical Companion",
+    copy: "Appointment support, hospital navigation, comfort, and follow-through help.",
     icon: MessageCircle,
+    serviceType: "medical_companion",
     tone: "gold",
   },
   {
@@ -293,12 +295,14 @@ function FeatureCard({
   icon: Icon,
   tone,
   wide,
+  serviceType,
 }: {
   title: string;
   copy: string;
   icon: LucideIcon;
   tone: string;
   wide?: boolean;
+  serviceType?: string;
 }) {
   return (
     <article className={`feature-card ${wide ? "wide" : ""}`}>
@@ -306,7 +310,7 @@ function FeatureCard({
         <Icon size={34} strokeWidth={1.7} />
       </span>
       <div>
-        <h3>{title}</h3>
+        <h3>{serviceType ? <ServiceLabel label={title} serviceType={serviceType} /> : title}</h3>
         <p>{copy}</p>
       </div>
     </article>

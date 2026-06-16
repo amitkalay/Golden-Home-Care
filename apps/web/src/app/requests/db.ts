@@ -83,6 +83,7 @@ export type ServiceBookingRecord = {
 export type UpcomingVisitRecord = {
   id: number;
   serviceRequestId: number;
+  serviceType: string;
   serviceLabel: string;
   bookingDate: string;
   startTime: string;
@@ -312,6 +313,7 @@ function toUpcomingVisitRecord(row: Record<string, unknown>, userId: string): Up
   return {
     id: Number(row.id),
     serviceRequestId: Number(row.serviceRequestId),
+    serviceType: String(row.serviceType),
     serviceLabel: providerServiceLabels.get(String(row.serviceType)) ?? String(row.serviceType),
     bookingDate: String(row.bookingDate),
     startTime: String(row.startTime),

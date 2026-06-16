@@ -11,7 +11,7 @@ function provider(overrides = {}) {
     latitude: 37.7749,
     longitude: -122.4194,
     serviceRadiusMiles: 10,
-    services: [{ serviceType: "companionship" }],
+    services: [{ serviceType: "medical_companion" }],
     ...overrides,
   };
 }
@@ -29,7 +29,7 @@ describe("provider search filtering", () => {
 
   it("filters by service", () => {
     const results = filterProviderSearchResults([
-      provider({ id: 1, services: [{ serviceType: "companionship" }] }),
+      provider({ id: 1, services: [{ serviceType: "medical_companion" }] }),
       provider({ id: 2, services: [{ serviceType: "music-lessons" }] }),
     ], { service: "music-lessons" });
 
@@ -46,4 +46,3 @@ describe("provider search filtering", () => {
     assert.deepEqual(results.map((item) => item.id), [1]);
   });
 });
-

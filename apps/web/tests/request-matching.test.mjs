@@ -6,7 +6,7 @@ const sanFrancisco = { latitude: 37.7749, longitude: -122.4194 };
 
 function request(overrides = {}) {
   return {
-    serviceType: "companionship",
+    serviceType: "medical_companion",
     location: sanFrancisco,
     requestedDate: "2026-05-21",
     windowStartTime: "09:00",
@@ -24,7 +24,7 @@ function provider(overrides = {}) {
     latitude: 37.7749,
     longitude: -122.4194,
     serviceRadiusMiles: 10,
-    services: [{ serviceType: "companionship" }],
+    services: [{ serviceType: "medical_companion" }],
     availabilityWindows: [{ dayOfWeek: 4, startTime: "08:00", endTime: "13:00" }],
     bookings: [],
     onDemandAvailable: false,

@@ -12,6 +12,7 @@ import {
   requestDurationOptions,
   requestUrgencyOptions,
 } from "../validation.js";
+import { ServiceInfoTooltip } from "../../provider/service-label";
 
 type RequestServiceFormProps = {
   action: (
@@ -137,7 +138,12 @@ export function RequestServiceForm({
       <FieldError className="full" message={state.fieldErrors.providerProfileId} />
 
       <label>
-        Service needed
+        <span className="field-label-row">
+          Service needed
+          {serviceOptions.some((option) => option.serviceType === "medical_companion") ? (
+            <ServiceInfoTooltip label="Medical Companion" serviceType="medical_companion" />
+          ) : null}
+        </span>
         <select
           name="serviceType"
           defaultValue={getStateValue(state, "serviceType", initialService)}

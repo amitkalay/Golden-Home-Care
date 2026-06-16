@@ -12,6 +12,14 @@ describe("homepage", () => {
       new URL("../src/app/provider/services.js", import.meta.url),
       "utf8",
     );
+    const providerUi = await readFile(
+      new URL("../src/app/provider/ui.tsx", import.meta.url),
+      "utf8",
+    );
+    const serviceLabel = await readFile(
+      new URL("../src/app/provider/service-label.tsx", import.meta.url),
+      "utf8",
+    );
     const inboxPopover = await readFile(
       new URL("../src/app/messages/inbox-popover.tsx", import.meta.url),
       "utf8",
@@ -85,7 +93,13 @@ describe("homepage", () => {
     assert.match(homepage, /Help your parent stay independent with trusted support nearby/);
     assert.equal(providerServices.includes("Gardening"), false);
     assert.equal(providerServices.includes("Arts & Crafts"), false);
-    for (const label of ["Meal Prep", "Companionship", "Errands", "Walks", "Pickleball Lessons", "Music Lessons"]) {
+    assert.ok(providerServices.includes("medical_companion"));
+    assert.ok(providerServices.includes("Medical Companion"));
+    assert.ok(providerServices.includes("A medical companion is a person who provides non-medical support"));
+    assert.match(providerUi, /showSuggested=\{option\.suggested\}/);
+    assert.match(serviceLabel, /service-tooltip-panel/);
+    assert.match(serviceLabel, /Suggested/);
+    for (const label of ["Meal Prep", "Medical Companion", "Errands", "Walks", "Pickleball Lessons", "Music Lessons"]) {
       assert.ok(providerServices.includes(label));
     }
   });

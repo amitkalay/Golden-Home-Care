@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { CalendarCheck2, CalendarDays, CheckCircle2, Clock, UserRound } from "lucide-react";
+import { ServiceLabel } from "./provider/service-label";
 import type { UpcomingVisitRecord } from "./requests/db";
 
 const MAX_REFRESH_DELAY_MS = 2_147_483_647;
@@ -72,7 +73,8 @@ export function UpcomingVisitCard({ visit }: UpcomingVisitCardProps) {
             {visit.participantName}
           </p>
           <strong>
-            <CheckCircle2 size={16} /> {visit.serviceLabel} confirmed
+            <CheckCircle2 size={16} />{" "}
+            <ServiceLabel label={visit.serviceLabel} serviceType={visit.serviceType} suffix="confirmed" />
           </strong>
         </>
       ) : (

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "../../lib/auth";
 import { MessageThread } from "../../messages/message-thread";
 import { getMessageThreadBundlesForMatchesForUser } from "../../messages/db";
+import { ServiceLabel } from "../../provider/service-label";
 import { getServiceRequestForRequester, type ServiceRequestRecord } from "../db";
 import { payForServiceRequest } from "../actions";
 
@@ -138,7 +139,9 @@ function PaymentReceipt({
 
       <div className="request-receipt-provider">
         <strong>{providerName}</strong>
-        <span>{request.serviceLabel}</span>
+        <span>
+          <ServiceLabel label={request.serviceLabel} serviceType={request.serviceType} />
+        </span>
       </div>
 
       <dl className="request-receipt-lines">
@@ -244,7 +247,9 @@ export default async function RequestConfirmationPage({ params, searchParams }: 
           <article>
             <CalendarCheck2 size={22} />
             <span>Service</span>
-            <strong>{request.serviceLabel}</strong>
+            <strong>
+              <ServiceLabel label={request.serviceLabel} serviceType={request.serviceType} />
+            </strong>
             <p>{request.matchPreference === "specific" ? request.providerDisplayName || "Selected provider" : "Any matching provider"}</p>
           </article>
           <article>

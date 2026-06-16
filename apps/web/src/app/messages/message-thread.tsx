@@ -3,12 +3,15 @@
 import { type FormEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { Send } from "lucide-react";
 import Pusher from "pusher-js";
+import { ServiceLabel } from "../provider/service-label";
 import type { MessageRecord, MessageThreadRecord } from "./db";
 import {
+  formatThreadDate,
+  formatThreadTime,
   getThreadDetailLine,
+  getThreadSchedule,
   getThreadStatusLabel,
   getThreadStatusTone,
-  getThreadTransactionLine,
 } from "./thread-metadata";
 
 type MessageThreadProps = {
@@ -44,6 +47,7 @@ export function MessageThread({ currentUserId, thread, initialMessages }: Messag
   const [error, setError] = useState("");
   const [displayUnreadCount, setDisplayUnreadCount] = useState(thread.unreadCount);
   const statusTone = getThreadStatusTone(thread);
+  const schedule = getThreadSchedule(thread);
   const messageListRef = useRef<HTMLDivElement | null>(null);
   const pusherKey = process.env.NEXT_PUBLIC_PUSHER_KEY || "";
   const pusherCluster = process.env.NEXT_PUBLIC_PUSHER_CLUSTER || "";
@@ -158,7 +162,14 @@ export function MessageThread({ currentUserId, thread, initialMessages }: Messag
               {getThreadStatusLabel(thread)}
             </span>
           </div>
-          <p className="message-thread-transaction">{getThreadTransactionLine(thread)}</p>
+          <p className="message-thread-transaction">
+            <ServiceLabel label={thread.serviceLabel || "Service"} serviceType={thread.serviceType} />
+            <span aria-hidden="true">·</span>
+            <span>
+              {formatThreadDate(schedule.date)} · {formatThreadTime(schedule.startTime)} -{" "}
+              {formatThreadTime(schedule.endTime)}
+            </span>
+          </p>
           <p className="message-thread-details">
             {getThreadDetailLine(thread)} · Request #{thread.serviceRequestId} · Match #{thread.requestProviderMatchId}
           </p>
