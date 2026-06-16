@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CalendarCheck2, Clock, CreditCard, Home, MapPin, MessageCircle, XCircle } from "lucide-react";
 import { requireUser } from "../../lib/auth";
 import { getUnreadNotificationCount } from "../../notifications/db";
+import { ServiceLabel } from "../../provider/service-label";
 import { cancelServiceRequest, payForServiceRequest } from "../../requests/actions";
 import type { ServiceRequestRecord } from "../../requests/db";
 import { getServiceRequestsForRequester } from "../../requests/db";
@@ -128,7 +129,9 @@ function RequestCard({ request }: { request: ServiceRequestRecord }) {
           <span className={`provider-status-badge status-${status}`}>
             {isPaymentDue ? "Payment due" : getStatusLabel(status)}
           </span>
-          <h2>{request.serviceLabel}</h2>
+          <h2>
+            <ServiceLabel label={request.serviceLabel} serviceType={request.serviceType} />
+          </h2>
           <p>Request #{request.id}</p>
         </div>
         <div className="provider-inbox-card-time">

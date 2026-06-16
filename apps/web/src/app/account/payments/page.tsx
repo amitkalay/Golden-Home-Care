@@ -4,6 +4,7 @@ import { requireUser } from "../../lib/auth";
 import { getUnreadNotificationCount } from "../../notifications/db";
 import { refreshProviderStripeAccountForUser } from "../../payments/db";
 import { getProviderProfileByUserId, type ProviderProfileRecord } from "../../provider/db";
+import { ServiceLabel } from "../../provider/service-label";
 import { payForServiceRequest } from "../../requests/actions";
 import { getServiceRequestsForRequester, type ServiceRequestRecord } from "../../requests/db";
 import { startAccountStripeProviderOnboarding } from "./actions";
@@ -126,7 +127,9 @@ function PaymentDueCard({ request }: { request: ServiceRequestRecord }) {
       <header className="account-payment-card-header">
         <div>
           <span className="provider-status-badge status-accepted">{getPaymentStatusLabel(request)}</span>
-          <h3>{request.serviceLabel}</h3>
+          <h3>
+            <ServiceLabel label={request.serviceLabel} serviceType={request.serviceType} />
+          </h3>
           <p>
             {formatDate(request.requestedDate)} · {formatTime(request.windowStartTime)} -{" "}
             {formatTime(request.windowEndTime)}
@@ -172,7 +175,9 @@ function PaidPaymentCard({ request }: { request: ServiceRequestRecord }) {
     <article className="account-payment-card compact">
       <div>
         <span className="provider-status-badge status-confirmed">Paid</span>
-        <h3>{request.serviceLabel}</h3>
+        <h3>
+          <ServiceLabel label={request.serviceLabel} serviceType={request.serviceType} />
+        </h3>
         <p>
           {formatPaidDate(payment.paidAt)} · {request.booking?.providerDisplayName || request.providerDisplayName || "Provider"}
         </p>

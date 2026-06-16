@@ -2,11 +2,15 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { ChevronLeft, Inbox as InboxIcon, MessageCircle, Search, X } from "lucide-react";
+import { ServiceLabel } from "../provider/service-label";
 import { MessageThread } from "./message-thread";
 import type { MessageInboxThreadBundle } from "./db";
 import {
+  formatThreadDate,
+  formatThreadTime,
   getThreadDetailLine,
   getThreadLifecycleTab,
+  getThreadSchedule,
   getThreadStatusLabel,
   getThreadStatusTone,
   getThreadTransactionLine,
@@ -233,6 +237,7 @@ export function InboxPopover({ currentUserId, initialThreads }: InboxPopoverProp
                   const isSelected = selectedThreadId === bundle.thread.id;
                   const preview = getThreadPreview(bundle, currentUserId);
                   const statusTone = getThreadStatusTone(bundle.thread);
+                  const schedule = getThreadSchedule(bundle.thread);
 
                   return (
                     <li key={bundle.thread.id}>
@@ -249,7 +254,16 @@ export function InboxPopover({ currentUserId, initialThreads }: InboxPopoverProp
                           <strong>{bundle.thread.otherParticipantName}</strong>
                           <span className="inbox-thread-preview">{preview}</span>
                           <span className="inbox-thread-transaction">
-                            {getThreadTransactionLine(bundle.thread)}
+                            <ServiceLabel
+                              label={bundle.thread.serviceLabel || "Service"}
+                              serviceType={bundle.thread.serviceType}
+                              tooltipFocusable={false}
+                            />
+                            <span aria-hidden="true">·</span>
+                            <span>
+                              {formatThreadDate(schedule.date)} · {formatThreadTime(schedule.startTime)} -{" "}
+                              {formatThreadTime(schedule.endTime)}
+                            </span>
                           </span>
                           <span className="inbox-thread-detail">{getThreadDetailLine(bundle.thread)}</span>
                         </span>

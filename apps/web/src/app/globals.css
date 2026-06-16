@@ -717,7 +717,7 @@
   color: var(--gold);
 }
 
-.request-confirmation-grid span {
+.request-confirmation-grid article > span {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
@@ -812,7 +812,7 @@
 }
 
 .request-receipt-header p,
-.request-receipt-provider span {
+.request-receipt-provider > span {
   margin: 0;
   color: var(--muted);
   line-height: 1.45;
@@ -1222,6 +1222,10 @@
 }
 
 .message-thread-transaction {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
   font-weight: 750;
 }
 
@@ -1466,7 +1470,9 @@
   gap: 8px;
 }
 
-.provider-chip-row span {
+.provider-chip-row > .provider-service-chip {
+  display: inline-flex;
+  align-items: center;
   border: 1px solid #cfe2d0;
   border-radius: 999px;
   background: #f4faf3;
@@ -2145,7 +2151,6 @@ textarea {
 }
 
 .inbox-thread-preview,
-.inbox-thread-transaction,
 .inbox-thread-detail {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -2159,10 +2164,22 @@ textarea {
 }
 
 .inbox-thread-transaction {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: visible;
   color: #f0f4f2;
   font-size: 13px;
   font-weight: 800;
   line-height: 1.25;
+  white-space: nowrap;
+}
+
+.inbox-thread-transaction > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .inbox-thread-detail {
@@ -2595,6 +2612,113 @@ textarea {
 .form-card textarea::placeholder,
 .form-card input::placeholder {
   color: #858b86;
+}
+
+.field-label-row,
+.service-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.field-label-row,
+.service-label {
+  flex-wrap: wrap;
+}
+
+.service-label-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.service-tooltip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.service-tooltip-trigger {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border: 1px solid #cfe2d0;
+  border-radius: 999px;
+  background: #fffdf8;
+  color: var(--deep);
+  cursor: help;
+  line-height: 1;
+}
+
+.service-tooltip-trigger:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.service-tooltip-panel {
+  position: absolute;
+  z-index: 40;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  width: min(310px, calc(100vw - 32px));
+  padding: 10px 12px;
+  border: 1px solid #cfe2d0;
+  border-radius: 5px;
+  background: #fffef9;
+  box-shadow: 0 14px 28px rgba(31, 69, 51, 0.18);
+  color: #25332f;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  text-transform: none;
+  transform: translateX(-50%) translateY(4px);
+  transition:
+    opacity 140ms ease,
+    transform 140ms ease,
+    visibility 140ms ease;
+  visibility: hidden;
+  white-space: normal;
+}
+
+.service-tooltip-panel::after {
+  position: absolute;
+  bottom: -6px;
+  left: 50%;
+  width: 10px;
+  height: 10px;
+  border-right: 1px solid #cfe2d0;
+  border-bottom: 1px solid #cfe2d0;
+  background: #fffef9;
+  content: "";
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.service-tooltip:hover .service-tooltip-panel,
+.service-tooltip:focus-within .service-tooltip-panel,
+.checkbox-group label:focus-within .service-tooltip-panel,
+.inbox-thread-row:focus-visible .service-tooltip-panel {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  visibility: visible;
+}
+
+.service-suggested-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #fff1ce;
+  color: #7a4f00;
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+  text-transform: uppercase;
 }
 
 .field-error {

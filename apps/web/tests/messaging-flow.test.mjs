@@ -122,7 +122,9 @@ describe("realtime request messaging source checks", () => {
     assert.match(threadComponent, /event\.preventDefault\(\)/);
     assert.match(threadComponent, /void sendCurrentMessage\(\)/);
     assert.match(threadComponent, /onKeyDown=\{handleMessageKeyDown\}/);
-    assert.match(threadComponent, /getThreadTransactionLine\(thread\)/);
+    assert.match(threadComponent, /<ServiceLabel label=\{thread\.serviceLabel \|\| "Service"\} serviceType=\{thread\.serviceType\} \/>/);
+    assert.match(threadComponent, /getThreadSchedule\(thread\)/);
+    assert.match(threadComponent, /formatThreadDate\(schedule\.date\)/);
     assert.match(threadComponent, /Request #\{thread\.serviceRequestId\}/);
     assert.doesNotMatch(threadComponent, /Request match #/);
     assert.match(messageDb, /export async function getMessageInboxThreadBundlesForUser/);
